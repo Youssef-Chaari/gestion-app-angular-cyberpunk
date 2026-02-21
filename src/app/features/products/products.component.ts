@@ -10,58 +10,187 @@ import { CategoryService, Category } from '../../core/services/category.service'
   imports: [CommonModule, FormsModule],
   template: `
     <div class="products">
-      <div class="list-header">
-        <h2>📦 PRODUITS</h2>
-        <button class="btn btn-primary" (click)="openForm()">+ AJOUTER</button>
+      <div class="products-header">
+        <div class="header-content">
+          <h1 class="page-title">⚡ GESTION DES PRODUITS</h1>
+          <p class="page-subtitle">Administration des articles et inventaire</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary btn-add" (click)="openForm()">
+            <span class="btn-icon">➕</span>
+            <span class="btn-text">NOUVEAU PRODUIT</span>
+          </button>
+        </div>
       </div>
 
-      <table class="table">
-        <thead>
-          <tr>
-            <th>NOM</th>
-            <th>CATÉGORIE</th>
-            <th>PRIX</th>
-            <th>ACTIONS</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let product of products">
-            <td>{{ product.name | uppercase }}</td>
-            <td>{{ product.category_name ? (product.category_name | uppercase) : ('CATÉGORIE ' + product.category_id) }}</td>
-            <td>TND{{ product.price | number: '1.2-2' }}</td>
-            <td>
-              <button class="btn btn-small btn-edit" (click)="editProduct(product)">MODIFIER</button>
-              <button class="btn btn-small btn-delete" (click)="deleteProduct(product.id)">SUPPRIMER</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div *ngIf="showForm" class="modal active">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2>{{ editingId ? 'MODIFIER' : 'AJOUTER' }} UN PRODUIT</h2>
-            <button class="close-btn" (click)="closeForm()">✕</button>
+      <div class="products-stats">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-info">
+            <h3>{{ products.length }}</h3>
+            <p>Produits actifs</p>
           </div>
-          <form (ngSubmit)="saveProduct()">
-            <div class="form-group">
-              <label for="name">NOM DU PRODUIT</label>
-              <input type="text" id="name" [(ngModel)]="formData.name" name="name" required>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏷️</div>
+          <div class="stat-info">
+            <h3>{{ categories.length }}</h3>
+            <p>Catégories</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-info">
+            <h3>TND{{ getTotalValue() | number:'1.0-0' }}</h3>
+            <p>Valeur totale</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="products-table-container">
+        <table class="products-table">
+          <thead>
+            <tr>
+              <th class="col-product">
+                <span class="col-icon">📦</span>
+                PRODUIT
+              </th>
+              <th class="col-category">
+                <span class="col-icon">🏷️</span>
+                CATÉGORIE
+              </th>
+              <th class="col-price">
+                <span class="col-icon">💰</span>
+                PRIX
+              </th>
+              <th class="col-actions">
+                <span class="col-icon">⚙️</span>
+                ACTIONS
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let product of products; trackBy: trackByProductId"
+                class="product-row"
+                [class.even]="products.indexOf(product) % 2 === 0">
+              <td class="col-product">
+                <div class="product-info">
+                  <div class="product-name">{{ product.name | uppercase }}</div>
+                  <div class="product-id">ID: {{ product.id }}</div>
+                </div>
+              </td>
+              <td class="col-category">
+                <span class="category-badge">
+                  {{ product.category_name ? (product.category_name | uppercase) : ('CATÉGORIE ' + product.category_id) }}
+                </span>
+              </td>
+              <td class="col-price">
+                <div class="price-display">
+                  <span class="price-amount">TND{{ product.price | number: '1.2-2' }}</span>
+                  <span class="price-currency">TND</span>
+                </div>
+              </td>
+              <td class="col-actions">
+                <div class="action-buttons">
+                  <button class="btn-action btn-edit" (click)="editProduct(product)"
+                          title="Modifier le produit">
+                    <span class="btn-icon">✏️</span>
+                    <span class="btn-text">ÉDITER</span>
+                  </button>
+                  <button class="btn-action btn-delete" (click)="deleteProduct(product.id)"
+                          title="Supprimer le produit">
+                    <span class="btn-icon">🗑️</span>
+                    <span class="btn-text">SUPPRIMER</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="products.length === 0" class="empty-row">
+              <td colspan="4" class="empty-state">
+                <div class="empty-content">
+                  <div class="empty-icon">📦</div>
+                  <h3>Aucun produit trouvé</h3>
+                  <p>Commencez par ajouter votre premier produit</p>
+                  <button class="btn btn-primary" (click)="openForm()">
+                    <span class="btn-icon">➕</span>
+                    AJOUTER UN PRODUIT
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Enhanced Modal -->
+      <div *ngIf="showForm" class="modal-overlay" (click)="closeForm()">
+        <div class="modal-container" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div class="modal-title">
+              <span class="modal-icon">{{ editingId ? '✏️' : '➕' }}</span>
+              <h2>{{ editingId ? 'MODIFIER LE PRODUIT' : 'NOUVEAU PRODUIT' }}</h2>
             </div>
-            <div class="form-group">
-              <label for="price">PRIX</label>
-              <input type="number" id="price" [(ngModel)]="formData.price" name="price" step="0.01" required>
+            <button class="modal-close" (click)="closeForm()" title="Fermer">
+              <span class="close-icon">✕</span>
+            </button>
+          </div>
+
+          <form class="product-form" (ngSubmit)="saveProduct()">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">📦</span>
+                  NOM DU PRODUIT
+                </label>
+                <input type="text"
+                       class="form-input"
+                       [(ngModel)]="formData.name"
+                       name="name"
+                       placeholder="Entrez le nom du produit"
+                       required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">💰</span>
+                  PRIX (TND)
+                </label>
+                <input type="number"
+                       class="form-input"
+                       [(ngModel)]="formData.price"
+                       name="price"
+                       placeholder="0.00"
+                       step="0.01"
+                       min="0"
+                       required>
+              </div>
+
+              <div class="form-group form-group-full">
+                <label class="form-label">
+                  <span class="label-icon">🏷️</span>
+                  CATÉGORIE
+                </label>
+                <select class="form-select"
+                        [(ngModel)]="formData.category_id"
+                        name="category_id"
+                        required>
+                  <option value="">Sélectionnez une catégorie</option>
+                  <option *ngFor="let category of categories" [value]="category.id">
+                    {{ category.name | uppercase }}
+                  </option>
+                </select>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="category">CATÉGORIE</label>
-              <select id="category" [(ngModel)]="formData.category_id" name="category_id" required>
-                <option value="">SÉLECTIONNER</option>
-                <option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</option>
-              </select>
-            </div>
+
             <div class="form-actions">
-              <button type="button" class="btn btn-cancel" (click)="closeForm()">ANNULER</button>
-              <button type="submit" class="btn btn-primary">ENREGISTRER</button>
+              <button type="button" class="btn btn-secondary" (click)="closeForm()">
+                <span class="btn-icon">❌</span>
+                <span class="btn-text">ANNULER</span>
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <span class="btn-icon">{{ editingId ? '💾' : '➕' }}</span>
+                <span class="btn-text">{{ editingId ? 'METTRE À JOUR' : 'CRÉER LE PRODUIT' }}</span>
+              </button>
             </div>
           </form>
         </div>
@@ -70,79 +199,311 @@ import { CategoryService, Category } from '../../core/services/category.service'
   `,
   styles: [`
     .products {
-      animation: fadeIn 0.5s ease-in;
+      animation: fadeInUp 0.6s ease-out;
+      padding: 0;
     }
 
-    .list-header {
+    /* Header Section */
+    .products-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
+      padding: 2rem;
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, rgba(0, 255, 136, 0.02) 100%);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      position: relative;
+      overflow: hidden;
     }
 
-    .list-header h2 {
+    .products-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #00ff88, #ff006e, #00ff88);
+      animation: borderGlow 3s ease-in-out infinite;
+    }
+
+    .header-content h1 {
       font-family: 'Orbitron', sans-serif;
+      font-size: 2.5rem;
+      color: #00ff88;
+      margin: 0 0 0.5rem 0;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      animation: textGlow 2s ease-in-out infinite;
+      text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+    }
+
+    .page-subtitle {
+      color: rgba(0, 255, 136, 0.7);
+      font-size: 1rem;
+      margin: 0;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 1px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn-add {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-add::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn-add:hover::before {
+      left: 100%;
+    }
+
+    /* Stats Cards */
+    .products-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, rgba(10, 14, 39, 0.8) 0%, rgba(26, 26, 62, 0.8) 100%);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #00ff88, #ff006e);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 255, 136, 0.2);
+      border-color: #00ff88;
+    }
+
+    .stat-icon {
       font-size: 2rem;
+      opacity: 0.8;
+    }
+
+    .stat-info h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.8rem;
       color: #00ff88;
       margin: 0;
-      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+
+    .stat-info p {
+      color: rgba(0, 255, 136, 0.7);
+      margin: 0.25rem 0 0 0;
+      font-size: 0.9rem;
       text-transform: uppercase;
-      animation: glow 2s ease-in-out infinite;
+      letter-spacing: 1px;
     }
 
-    .table {
-      width: 100%;
-      background: linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, rgba(0, 255, 136, 0.02) 100%);
-      border-collapse: collapse;
-      border-radius: 8px;
+    /* Table Container */
+    .products-table-container {
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.02) 0%, rgba(0, 255, 136, 0.01) 100%);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 136, 0.2);
       overflow: hidden;
-      border: 2px solid #00ff88;
-      box-shadow: 0 0 20px rgba(0, 255, 136, 0.2), inset 0 0 20px rgba(0, 255, 136, 0.1);
+      position: relative;
     }
 
-    .table thead {
-      background: rgba(0, 255, 136, 0.1);
-      border-bottom: 2px solid #00ff88;
+    .products-table-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #00ff88, #ff006e, #00ff88);
+      animation: borderGlow 3s ease-in-out infinite;
     }
 
-    .table th {
-      padding: 1rem;
+    /* Table Styles */
+    .products-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: transparent;
+    }
+
+    .products-table thead {
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 255, 136, 0.05) 100%);
+    }
+
+    .products-table th {
+      padding: 1.25rem 1rem;
       text-align: left;
       font-weight: 700;
       color: #00ff88;
       font-family: 'Orbitron', sans-serif;
       letter-spacing: 1px;
       text-transform: uppercase;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
+      border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+      position: relative;
     }
 
-    .table td {
-      padding: 1rem;
-      border-bottom: 1px solid rgba(0, 255, 136, 0.2);
-      color: #00ff88;
+    .col-icon {
+      margin-right: 0.5rem;
+      opacity: 0.8;
     }
 
-    .table tbody tr:hover {
-      background: rgba(0, 255, 136, 0.1);
+    .product-row {
+      transition: all 0.3s ease;
+      border-bottom: 1px solid rgba(0, 255, 136, 0.1);
+    }
+
+    .product-row:hover {
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.08) 0%, rgba(0, 255, 136, 0.04) 100%);
+      transform: scale(1.01);
       box-shadow: inset 0 0 20px rgba(0, 255, 136, 0.1);
     }
 
-    .btn-small {
-      padding: 0.5rem 1rem;
-      margin-right: 0.5rem;
-      border: 1px solid;
-      border-radius: 4px;
-      cursor: pointer;
+    .product-row.even {
+      background: rgba(0, 255, 136, 0.02);
+    }
+
+    .col-product {
+      min-width: 200px;
+    }
+
+    .product-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .product-name {
+      font-weight: 600;
+      color: #00ff88;
+      font-size: 1rem;
+      text-shadow: 0 0 5px rgba(0, 255, 136, 0.3);
+    }
+
+    .product-id {
       font-size: 0.75rem;
+      color: rgba(0, 255, 136, 0.6);
+      font-family: 'Space Mono', monospace;
+    }
+
+    .category-badge {
+      background: linear-gradient(135deg, rgba(255, 0, 110, 0.2) 0%, rgba(255, 0, 110, 0.1) 100%);
+      color: #ff006e;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 0, 110, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: inline-block;
+    }
+
+    .price-display {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .price-amount {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      color: #00ff88;
+      font-weight: 600;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+
+    .price-currency {
+      font-size: 0.7rem;
+      color: rgba(0, 255, 136, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .col-actions {
+      min-width: 180px;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-start;
+    }
+
+    .btn-action {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
       transition: all 0.3s ease;
       font-family: 'Orbitron', sans-serif;
       letter-spacing: 1px;
       text-transform: uppercase;
       font-weight: 600;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-action::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn-action:hover::before {
+      left: 100%;
     }
 
     .btn-edit {
-      background: rgba(0, 255, 136, 0.2);
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.2) 0%, rgba(0, 255, 136, 0.1) 100%);
       color: #00ff88;
       border-color: #00ff88;
     }
@@ -150,11 +511,12 @@ import { CategoryService, Category } from '../../core/services/category.service'
     .btn-edit:hover {
       background: #00ff88;
       color: #0a0e27;
-      box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+      transform: translateY(-1px);
     }
 
     .btn-delete {
-      background: rgba(255, 0, 110, 0.2);
+      background: linear-gradient(135deg, rgba(255, 0, 110, 0.2) 0%, rgba(255, 0, 110, 0.1) 100%);
       color: #ff006e;
       border-color: #ff006e;
     }
@@ -162,45 +524,102 @@ import { CategoryService, Category } from '../../core/services/category.service'
     .btn-delete:hover {
       background: #ff006e;
       color: #0a0e27;
-      box-shadow: 0 0 15px rgba(255, 0, 110, 0.6);
+      box-shadow: 0 0 20px rgba(255, 0, 110, 0.6);
+      transform: translateY(-1px);
     }
 
-    .modal {
-      display: none;
+    /* Empty State */
+    .empty-row {
+      background: linear-gradient(135deg, rgba(10, 14, 39, 0.5) 0%, rgba(26, 26, 62, 0.5) 100%);
+    }
+
+    .empty-state {
+      padding: 3rem 1rem;
+      text-align: center;
+    }
+
+    .empty-content {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .empty-icon {
+      font-size: 4rem;
+      opacity: 0.5;
+      margin-bottom: 1rem;
+    }
+
+    .empty-content h3 {
+      color: #00ff88;
+      font-family: 'Orbitron', sans-serif;
+      margin: 0 0 1rem 0;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .empty-content p {
+      color: rgba(0, 255, 136, 0.7);
+      margin: 0 0 2rem 0;
+      font-size: 1rem;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      z-index: 2000;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
       justify-content: center;
       align-items: center;
-      backdrop-filter: blur(5px);
+      z-index: 2000;
+      animation: fadeIn 0.3s ease-out;
     }
 
-    .modal.active {
-      display: flex;
-    }
-
-    .modal-content {
+    .modal-container {
       background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(26, 26, 62, 0.95) 100%);
-      padding: 2rem;
-      border-radius: 8px;
-      width: 100%;
-      max-width: 500px;
+      border-radius: 16px;
       border: 2px solid #00ff88;
-      box-shadow: 0 0 40px rgba(0, 255, 136, 0.4), inset 0 0 40px rgba(0, 255, 136, 0.1);
-      backdrop-filter: blur(10px);
+      box-shadow: 0 0 50px rgba(0, 255, 136, 0.4), inset 0 0 50px rgba(0, 255, 136, 0.1);
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      animation: modalSlideIn 0.4s ease-out;
+    }
+
+    .modal-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #00ff88, #ff006e, #00ff88);
+      animation: borderGlow 2s ease-in-out infinite;
     }
 
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.5rem;
-      border-bottom: 1px solid #00ff88;
-      padding-bottom: 1rem;
+      padding: 2rem;
+      border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+      position: relative;
+    }
+
+    .modal-title {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .modal-icon {
+      font-size: 1.5rem;
     }
 
     .modal-header h2 {
@@ -209,29 +628,56 @@ import { CategoryService, Category } from '../../core/services/category.service'
       font-family: 'Orbitron', sans-serif;
       letter-spacing: 2px;
       text-transform: uppercase;
+      font-size: 1.5rem;
+      text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
     }
 
-    .close-btn {
+    .modal-close {
       background: none;
       border: none;
       font-size: 1.5rem;
       cursor: pointer;
       color: #ff006e;
       transition: all 0.3s ease;
+      padding: 0.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .close-btn:hover {
+    .modal-close:hover {
+      background: rgba(255, 0, 110, 0.1);
       color: #00ff88;
-      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+      transform: rotate(90deg);
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
     }
 
-    .form-group {
-      margin-bottom: 1.5rem;
+    .close-icon {
+      line-height: 1;
     }
 
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
+    /* Form Styles */
+    .product-form {
+      padding: 2rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-group-full {
+      grid-column: 1 / -1;
+    }
+
+    .form-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
       font-family: 'Orbitron', sans-serif;
       font-weight: 700;
       color: #00ff88;
@@ -240,64 +686,113 @@ import { CategoryService, Category } from '../../core/services/category.service'
       font-size: 0.85rem;
     }
 
-    input, select {
+    .label-icon {
+      opacity: 0.8;
+    }
+
+    .form-input, .form-select {
       width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #00ff88;
-      border-radius: 4px;
+      padding: 1rem;
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      border-radius: 8px;
       font-size: 1rem;
       background: rgba(0, 255, 136, 0.05);
       color: #00ff88;
       font-family: 'Space Mono', monospace;
       transition: all 0.3s ease;
+      position: relative;
     }
 
-    input::placeholder {
+    .form-input::placeholder {
       color: rgba(0, 255, 136, 0.5);
     }
 
-    input:focus, select:focus {
+    .form-input:focus, .form-select:focus {
       outline: none;
-      border-color: #ff006e;
-      box-shadow: 0 0 20px rgba(0, 255, 136, 0.5), inset 0 0 20px rgba(0, 255, 136, 0.1);
+      border-color: #00ff88;
+      box-shadow: 0 0 25px rgba(0, 255, 136, 0.3), inset 0 0 25px rgba(0, 255, 136, 0.1);
       background: rgba(0, 255, 136, 0.1);
+      transform: translateY(-1px);
     }
 
+    .form-select {
+      cursor: pointer;
+    }
+
+    .form-select option {
+      background: #0a0e27;
+      color: #00ff88;
+    }
+
+    /* Form Actions */
     .form-actions {
       display: flex;
       gap: 1rem;
-      margin-top: 2rem;
+      justify-content: flex-end;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(0, 255, 136, 0.2);
     }
 
-    .form-actions button {
+    .form-actions .btn {
       flex: 1;
+      max-width: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
 
-    .btn-cancel {
+    .form-actions .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .form-actions .btn:hover::before {
+      left: 100%;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00ff88, #00cc6a);
+      color: #0a0e27;
+      border: 2px solid #00ff88;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #00cc6a, #00ff88);
+      box-shadow: 0 0 25px rgba(0, 255, 136, 0.6);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
       background: transparent;
       color: #ff006e;
-      border-color: #ff006e;
-      box-shadow: inset 0 0 20px rgba(255, 0, 110, 0.2);
+      border: 2px solid #ff006e;
     }
 
-    .btn-cancel:hover {
+    .btn-secondary:hover {
       background: rgba(255, 0, 110, 0.1);
-      box-shadow: 0 0 20px rgba(255, 0, 110, 0.5), inset 0 0 20px rgba(255, 0, 110, 0.2);
+      box-shadow: 0 0 25px rgba(255, 0, 110, 0.5);
+      transform: translateY(-2px);
     }
 
-    @keyframes glow {
-      0%, 100% {
-        text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88;
-      }
-      50% {
-        text-shadow: 0 0 20px #00ff88, 0 0 30px #00ff88, 0 0 40px #00ff88, 0 0 50px #00ff88;
-      }
-    }
-
-    @keyframes fadeIn {
+    /* Animations */
+    @keyframes fadeInUp {
       from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(30px);
       }
       to {
         opacity: 1;
@@ -305,26 +800,123 @@ import { CategoryService, Category } from '../../core/services/category.service'
       }
     }
 
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes textGlow {
+      0%, 100% {
+        text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+      }
+      50% {
+        text-shadow: 0 0 20px #00ff88, 0 0 30px #00ff88, 0 0 40px #00ff88;
+      }
+    }
+
+    @keyframes borderGlow {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    /* Responsive Design */
     @media (max-width: 768px) {
-      .list-header {
+      .products-header {
         flex-direction: column;
-        gap: 1rem;
+        gap: 1.5rem;
+        text-align: center;
       }
 
-      .list-header h2 {
+      .header-content h1 {
+        font-size: 2rem;
+      }
+
+      .products-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .products-table-container {
+        overflow-x: auto;
+      }
+
+      .products-table {
+        min-width: 600px;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .btn-action {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.7rem;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .form-actions .btn {
+        max-width: none;
+      }
+
+      .modal-container {
+        width: 95%;
+        margin: 1rem;
+      }
+
+      .modal-header {
+        padding: 1.5rem;
+      }
+
+      .product-form {
+        padding: 1.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .products-header {
+        padding: 1.5rem;
+      }
+
+      .header-content h1 {
         font-size: 1.5rem;
       }
 
-      .btn {
-        width: 100%;
+      .stat-card {
+        padding: 1rem;
       }
 
-      .table {
-        font-size: 0.85rem;
+      .stat-info h3 {
+        font-size: 1.5rem;
       }
 
-      .table th, .table td {
-        padding: 0.75rem;
+      .modal-header h2 {
+        font-size: 1.2rem;
       }
     }
   `]
@@ -451,5 +1043,13 @@ export class ProductsComponent implements OnInit {
   closeForm(): void {
     this.showForm = false;
     this.editingId = null;
+  }
+
+  getTotalValue(): number {
+    return this.products.reduce((total, product) => total + product.price, 0);
+  }
+
+  trackByProductId(index: number, product: Product): number {
+    return product.id;
   }
 }

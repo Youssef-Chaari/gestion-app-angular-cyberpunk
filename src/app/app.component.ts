@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { map } from 'rxjs/operators';
 import { AuthService } from './core/services/auth.service';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
 import { SidebarComponent } from './shared/components/sidebar/sidebar.component';
@@ -12,13 +13,13 @@ import { SidebarComponent } from './shared/components/sidebar/sidebar.component'
   template: `
     <div class="app-container">
       <app-navbar *ngIf="isAuthenticated$ | async"></app-navbar>
-      <div class="app-main" *ngIf="isAuthenticated$ | async">
+      <div class="app-main" *ngIf="(isAuthenticated$ | async) && (isAdmin$ | async)">
         <app-sidebar></app-sidebar>
         <main class="app-content">
           <router-outlet></router-outlet>
         </main>
       </div>
-      <router-outlet *ngIf="!(isAuthenticated$ | async)"></router-outlet>
+      <router-outlet *ngIf="!(isAuthenticated$ | async) || !(isAdmin$ | async)"></router-outlet>
     </div>
   `,
   styles: [`
@@ -55,6 +56,9 @@ import { SidebarComponent } from './shared/components/sidebar/sidebar.component'
 })
 export class AppComponent implements OnInit {
   isAuthenticated$ = this.authService.isAuthenticated$;
+  isAdmin$ = this.authService.currentUser$.pipe(
+    map(user => user?.role === 'admin')
+  );
 
   constructor(private authService: AuthService) {}
 

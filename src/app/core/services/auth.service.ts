@@ -101,6 +101,15 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  getUserRole(): string | null {
+    const user = this.getCurrentUser();
+    return user ? user.role : null;
+  }
+
+  isAdmin(): boolean {
+    return this.getUserRole() === 'admin';
+  }
+
   isAuthenticated(): boolean {
     return this.isAuthenticatedSubject.value;
   }

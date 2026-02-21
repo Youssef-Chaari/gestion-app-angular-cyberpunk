@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
+import { AdminGuard } from './core/guards/admin.guard';
+import { HomeComponent } from './features/home/home.component';
 
 export const routes: Routes = [
   {
@@ -8,7 +10,7 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, AdminGuard],
     loadChildren: () => import('./features/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES)
   },
   {
@@ -27,11 +29,10 @@ export const routes: Routes = [
   },
   {
     path: '',
-    redirectTo: '/dashboard',
-    pathMatch: 'full'
+    component: HomeComponent
   },
   {
     path: '**',
-    redirectTo: '/dashboard'
+    component: HomeComponent
   }
 ];
