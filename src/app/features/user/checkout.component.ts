@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CartService } from '../../core/services/cart.service';
 import { FormsModule } from '@angular/forms';
+import { FirestoreOrderService } from '../../core/services/firestore-order.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-checkout',
@@ -31,7 +33,7 @@ export class CheckoutComponent {
   name = '';
   address = '';
 
-  constructor(private cart: CartService, private router: Router) {}
+  constructor(private cart: CartService, private router: Router, private orders: FirestoreOrderService, private auth: AuthService) {}
 
   placeOrder() {
     const items = this.cart.getItems();
@@ -39,20 +41,37 @@ export class CheckoutComponent {
       alert('Panier vide');
       return;
     }
-    const ordersRaw = localStorage.getItem('app_orders');
-    const orders = ordersRaw ? JSON.parse(ordersRaw) : [];
+    
+    // Add current stock from product to each item for stock decrement
     const order = {
-      id: Date.now(),
       name: this.name,
       address: this.address,
-      items,
+      items: items.map((it: any) => ({
+        ...it,
+        currentStock: it.product?.stock || 0
+      })),
       total: items.reduce((s:any, it:any)=> s + it.product.price * it.quantity, 0),
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      userId: (this.auth.getCurrentUser() as any)?.uid || (this.auth.getCurrentUser() as any)?.id || null
     };
-    orders.push(order);
-    localStorage.setItem('app_orders', JSON.stringify(orders));
-    this.cart.clear();
-    alert('Commande créée');
-    this.router.navigate(['/shop/profile']);
+
+    // create order in Firestore, fallback to localStorage
+    this.orders.createOrder(order).subscribe({
+      next: (res: any) => {
+        this.cart.clear();
+        alert('Commande créée (id: ' + (res?.id || 'n/a') + ')');
+        this.router.navigate(['/shop/profile']);
+      },
+      error: (err: any) => {
+        console.error('Order create failed, saving locally', err);
+        const ordersRaw = localStorage.getItem('app_orders');
+        const orders = ordersRaw ? JSON.parse(ordersRaw) : [];
+        orders.push(Object.assign({ id: Date.now() }, order));
+        localStorage.setItem('app_orders', JSON.stringify(orders));
+        this.cart.clear();
+        alert('Commande créée (enregistrée localement)');
+        this.router.navigate(['/shop/profile']);
+      }
+    });
   }
 }

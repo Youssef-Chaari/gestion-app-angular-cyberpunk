@@ -1,43 +1,99 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  addDoc,
+  setDoc,
+  deleteDoc,
+  Firestore
+} from 'firebase/firestore';
+import { from, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+const firebaseApp = getApps().length ? getApp() : initializeApp(environment.firebase || {});
+const db: Firestore = getFirestore(firebaseApp);
 
 export interface Product {
-  id: number;
+  id?: string | number;
   name: string;
   price: number;
-  category_id: number;
+  categoryId?: string | number;
+  category_id?: string | number;
+  category_name?: string;
   description?: string;
   created_at?: string;
-  category_name?: string;
+  stock?: number;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class ProductService {
-  private apiUrl = `${environment.apiUrl}/products.php`;
+  private productsCol = collection(db, 'products');
 
-  constructor(private http: HttpClient) {}
-
-  getProducts(): Observable<any> {
-    return this.http.get(this.apiUrl);
+  getProducts(): Observable<any[]> {
+    return from(getDocs(this.productsCol)).pipe(
+      map(snapshot => snapshot.docs.map(d => {
+        const data = d.data() as any;
+        // Exclude id from data since we use the document ID
+        const { id, ...productData } = data;
+        return { id: d.id, ...productData };
+      }))
+    );
   }
 
-  getProduct(id: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}?id=${id}`);
+  getProductsWithCategories(): Observable<{ products: any[], categories: any[] }> {
+    const categoriesCol = collection(db, 'categories');
+    return from(Promise.all([
+      getDocs(this.productsCol),
+      getDocs(categoriesCol)
+    ])).pipe(
+      map(([productsSnap, categoriesSnap]) => {
+        const categories = categoriesSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+        const categoryMap = new Map(categories.map(c => [String(c.id).toLowerCase(), c.name]));
+
+        const products = productsSnap.docs.map(doc => {
+          const data = doc.data() as any;
+          // Exclude id from data since we use the document ID
+          const { id, ...productData } = data;
+          const product = { id: doc.id, ...productData };
+          const categoryId = String(product.categoryId || product.category_id || '').toLowerCase();
+          const categoryName = categoryMap.get(categoryId);
+          product.category_name = categoryName || `Catégorie ${categoryId}`;
+          console.log(`Product ${product.name}: categoryId=${categoryId}, found=${!!categoryName}, name=${product.category_name}`);
+          return product;
+        });
+
+        return { products, categories: categories.map(c => ({ ...c, id: String(c.id) })) };
+      })
+    );
   }
 
-  createProduct(product: Product): Observable<any> {
-    return this.http.post(this.apiUrl, product);
+  getProduct(id: string | number): Observable<any | null> {
+    const ref = doc(db, 'products', String(id));
+    return from(getDoc(ref)).pipe(map(d => {
+      if (!d.exists()) return null;
+      const data = d.data() as any;
+      // Exclude id from data since we use the document ID
+      const { id: _, ...productData } = data;
+      return { id: d.id, ...productData };
+    }));
   }
 
-  updateProduct(id: number, product: Product): Observable<any> {
-    return this.http.put(`${this.apiUrl}?id=${id}`, product);
+  createProduct(product: Product) {
+    return from(addDoc(this.productsCol, product).then(ref => ref.id));
   }
 
-  deleteProduct(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}?id=${id}`);
+  updateProduct(id: string | number, product: Partial<Product>) {
+    const ref = doc(db, 'products', String(id));
+    return from(setDoc(ref, product, { merge: true }));
+  }
+
+  deleteProduct(id: string | number) {
+    const ref = doc(db, 'products', String(id));
+    return from(deleteDoc(ref));
   }
 }

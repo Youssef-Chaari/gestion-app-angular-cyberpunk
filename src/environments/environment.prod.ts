@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://prod-api-url.com/gestion-app-api',
+  apiUrl: '',
   firebase: {
     apiKey: "AIzaSyBJX8MxP_aGla3vDz2eXaPLjFPEoCtNfwc",
     authDomain: "gestion-app-c50c4.firebaseapp.com",

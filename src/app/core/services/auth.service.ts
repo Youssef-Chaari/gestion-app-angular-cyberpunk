@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { FirebaseAuthService } from './firebase-auth.service';
 import { environment } from '../../../environments/environment';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { tap, catchError, map } from 'rxjs/operators';
+import { of } from 'rxjs';
+// environment is already imported above
 
 export interface User {
   id: number;
@@ -30,9 +32,29 @@ export class AuthService {
   currentUser$ = this.currentUserSubject.asObservable();
   isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private firebaseAuthService: FirebaseAuthService) {}
 
   login(email: string, password: string): Observable<AuthResponse> {
+    // If Firebase configured, use Firebase auth
+    if (environment.firebase && environment.firebase.apiKey && this.firebaseAuthService) {
+      return this.firebaseAuthService.login(email, password).pipe(
+        map((res: any) => {
+          if (res && res.token) {
+            localStorage.setItem('token', res.token);
+            localStorage.setItem('user', JSON.stringify(res.user));
+            this.currentUserSubject.next(res.user);
+            this.isAuthenticatedSubject.next(true);
+            return { success: true, message: 'Logged in via Firebase', token: res.token, user: res.user } as AuthResponse;
+          }
+          return { success: false, message: 'Firebase login failed' } as AuthResponse;
+        }),
+        catchError(error => {
+          console.error('Firebase login error:', error);
+          return of({ success: false, message: 'Erreur de connexion' });
+        })
+      );
+    }
+
     return this.http.post<AuthResponse>(`${this.apiUrl}/login.php`, { email, password })
       .pipe(
         tap(response => {
@@ -51,6 +73,26 @@ export class AuthService {
   }
 
   register(username: string, email: string, password: string): Observable<AuthResponse> {
+    if (environment.firebase && environment.firebase.apiKey && this.firebaseAuthService) {
+      // create user in Firebase
+      return this.firebaseAuthService.register(email, password).pipe(
+        map((res: any) => {
+          if (res && res.token) {
+            localStorage.setItem('token', res.token);
+            localStorage.setItem('user', JSON.stringify(res.user));
+            this.currentUserSubject.next(res.user);
+            this.isAuthenticatedSubject.next(true);
+            return { success: true, message: 'Registered via Firebase', token: res.token, user: res.user } as AuthResponse;
+          }
+          return { success: false, message: 'Firebase register failed' } as AuthResponse;
+        }),
+        catchError(error => {
+          console.error('Firebase register error:', error);
+          return of({ success: false, message: 'Erreur d\'inscription' });
+        })
+      );
+    }
+
     return this.http.post<AuthResponse>(`${this.apiUrl}/register.php`, {
       username,
       email,

@@ -1,40 +1,57 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, Firestore } from 'firebase/firestore';
+import { from, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+const firebaseApp = getApps().length ? getApp() : initializeApp(environment.firebase || {});
+const db: Firestore = getFirestore(firebaseApp);
 
 export interface Category {
-  id: number;
+  id?: string | number;
   name: string;
   description?: string;
   created_at?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class CategoryService {
-  private apiUrl = `${environment.apiUrl}/categories.php`;
+  private categoriesCol = collection(db, 'categories');
 
-  constructor(private http: HttpClient) {}
-
-  getCategories(): Observable<any> {
-    return this.http.get(this.apiUrl);
+  getCategories(): Observable<any[]> {
+    return from(getDocs(this.categoriesCol)).pipe(
+      map(snapshot => snapshot.docs.map(d => {
+        const data = d.data() as any;
+        // Exclude id from data since we use the document ID
+        const { id, ...categoryData } = data;
+        return { id: d.id, ...categoryData };
+      }))
+    );
   }
 
-  getCategory(id: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}?id=${id}`);
+  getCategory(id: string | number): Observable<any | null> {
+    const ref = doc(db, 'categories', String(id));
+    return from(getDoc(ref)).pipe(map(d => {
+      if (!d.exists()) return null;
+      const data = d.data() as any;
+      // Exclude id from data since we use the document ID
+      const { id: _, ...categoryData } = data;
+      return { id: d.id, ...categoryData };
+    }));
   }
 
-  createCategory(category: Category): Observable<any> {
-    return this.http.post(this.apiUrl, category);
+  createCategory(category: Category) {
+    return from(addDoc(this.categoriesCol, category).then(ref => ref.id));
   }
 
-  updateCategory(id: number, category: Category): Observable<any> {
-    return this.http.put(`${this.apiUrl}?id=${id}`, category);
+  updateCategory(id: string | number, category: Partial<Category>) {
+    const ref = doc(db, 'categories', String(id));
+    return from(setDoc(ref, category, { merge: true }));
   }
 
-  deleteCategory(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}?id=${id}`);
+  deleteCategory(id: string | number) {
+    const ref = doc(db, 'categories', String(id));
+    return from(deleteDoc(ref));
   }
 }

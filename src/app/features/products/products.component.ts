@@ -63,6 +63,10 @@ import { CategoryService, Category } from '../../core/services/category.service'
                 <span class="col-icon">💰</span>
                 PRIX
               </th>
+              <th class="col-stock">
+                <span class="col-icon">📦</span>
+                STOCK
+              </th>
               <th class="col-actions">
                 <span class="col-icon">⚙️</span>
                 ACTIONS
@@ -76,18 +80,23 @@ import { CategoryService, Category } from '../../core/services/category.service'
               <td class="col-product">
                 <div class="product-info">
                   <div class="product-name">{{ product.name | uppercase }}</div>
-                  <div class="product-id">ID: {{ product.id }}</div>
                 </div>
               </td>
               <td class="col-category">
                 <span class="category-badge">
-                  {{ product.category_name ? (product.category_name | uppercase) : ('CATÉGORIE ' + product.category_id) }}
+                  {{ product.category_name | uppercase }}
                 </span>
               </td>
               <td class="col-price">
                 <div class="price-display">
                   <span class="price-amount">TND{{ product.price | number: '1.2-2' }}</span>
                   <span class="price-currency">TND</span>
+                </div>
+              </td>
+              <td class="col-stock">
+                <div class="stock-display" [class.low-stock]="product.stock <= 0">
+                  <span class="stock-amount">{{ product.stock || 0 }}</span>
+                  <span class="stock-label">unités</span>
                 </div>
               </td>
               <td class="col-actions">
@@ -106,7 +115,7 @@ import { CategoryService, Category } from '../../core/services/category.service'
               </td>
             </tr>
             <tr *ngIf="products.length === 0" class="empty-row">
-              <td colspan="4" class="empty-state">
+              <td colspan="5" class="empty-state">
                 <div class="empty-content">
                   <div class="empty-icon">📦</div>
                   <h3>Aucun produit trouvé</h3>
@@ -165,6 +174,20 @@ import { CategoryService, Category } from '../../core/services/category.service'
                        required>
               </div>
 
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">📦</span>
+                  STOCK
+                </label>
+                <input type="number"
+                       class="form-input"
+                       [(ngModel)]="formData.stock"
+                       name="stock"
+                       placeholder="0"
+                       min="0"
+                       required>
+              </div>
+
               <div class="form-group form-group-full">
                 <label class="form-label">
                   <span class="label-icon">🏷️</span>
@@ -175,7 +198,7 @@ import { CategoryService, Category } from '../../core/services/category.service'
                         name="category_id"
                         required>
                   <option value="">Sélectionnez une catégorie</option>
-                  <option *ngFor="let category of categories" [value]="category.id">
+                  <option *ngFor="let category of categories" [value]="category.id.toString()">
                     {{ category.name | uppercase }}
                   </option>
                 </select>
@@ -183,13 +206,13 @@ import { CategoryService, Category } from '../../core/services/category.service'
             </div>
 
             <div class="form-actions">
-              <button type="button" class="btn btn-secondary" (click)="closeForm()">
+              <button type="button" class="btn btn-secondary" (click)="closeForm()" [disabled]="isSaving">
                 <span class="btn-icon">❌</span>
                 <span class="btn-text">ANNULER</span>
               </button>
-              <button type="submit" class="btn btn-primary">
-                <span class="btn-icon">{{ editingId ? '💾' : '➕' }}</span>
-                <span class="btn-text">{{ editingId ? 'METTRE À JOUR' : 'CRÉER LE PRODUIT' }}</span>
+              <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+                <span class="btn-icon">{{ isSaving ? '⏳' : (editingId ? '💾' : '➕') }}</span>
+                <span class="btn-text">{{ isSaving ? (editingId ? 'MISE À JOUR...' : 'CRÉATION...') : (editingId ? 'METTRE À JOUR' : 'CRÉER LE PRODUIT') }}</span>
               </button>
             </div>
           </form>
@@ -919,59 +942,82 @@ import { CategoryService, Category } from '../../core/services/category.service'
         font-size: 1.2rem;
       }
     }
+
+    /* Stock Display Styles */
+    .stock-display {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 255, 136, 0.05) 100%);
+      color: #00ff88;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .stock-display.low-stock {
+      background: linear-gradient(135deg, rgba(255, 0, 110, 0.1) 0%, rgba(255, 0, 110, 0.05) 100%);
+      color: #ff006e;
+      border-color: rgba(255, 0, 110, 0.3);
+      box-shadow: inset 0 0 10px rgba(255, 0, 110, 0.1);
+    }
+
+    .col-stock {
+      min-width: 100px;
+    }
   `]
 })
 export class ProductsComponent implements OnInit {
   products: Product[] = [];
   categories: Category[] = [];
   showForm = false;
-  editingId: number | null = null;
+  editingId: string | null = null;
+  isSaving = false;
   formData: Product = {
-    id: 0,
+    id: '',
     name: '',
     price: 0,
-    category_id: 0
+    category_id: '',
+    stock: 0
   };
 
   constructor(private productService: ProductService, private categoryService: CategoryService) {}
 
   ngOnInit(): void {
     this.loadProducts();
-    this.loadCategories();
   }
 
   loadProducts(): void {
-    this.productService.getProducts().subscribe({
-      next: (data) => {
-        // API may return an array or an object with a `data` field
-        const payload = Array.isArray(data) ? data : (data.data || []);
-        // map category name if provided by API
-        this.products = payload.map((p: any) => ({
+    this.productService.getProductsWithCategories().subscribe({
+      next: (data: { products: any[], categories: any[] }) => {
+        this.products = data.products.map((p: any) => ({
           id: p.id,
           name: p.name,
           price: Number(p.price),
-          category_id: p.category_id,
+          category_id: String(p.categoryId || p.category_id || ''),
           description: p.description,
           created_at: p.created_at,
-          category_name: p.category_name // may be undefined
+          stock: Number(p.stock || 0),
+          category_name: p.category_name
         }));
-        // if some products lack category_name, try resolving from categories
-        if (this.categories.length && this.products.length) {
-          const map = new Map(this.categories.map(c => [c.id, c.name]));
-          this.products = this.products.map(prod => ({
-            ...prod,
-            category_name: prod.category_name || (prod.category_id ? map.get(prod.category_id) : undefined)
-          }));
-        }
+        this.categories = data.categories;
+        console.log('Loaded products:', this.products.map(p => ({ id: p.id, category_id: p.category_id, category_name: p.category_name })));
+        console.log('Loaded categories:', this.categories);
       },
       error: (err) => {
         console.error('Error loading products:', err);
         // Données de démo
         this.products = [
-          { id: 1, name: 'Smartphone X1', price: 699.99, category_id: 1 },
-          { id: 2, name: 'Laptop Pro', price: 1200, category_id: 1 },
-          { id: 3, name: 'Tablette Ultra', price: 499.99, category_id: 1 },
-          { id: 4, name: 'Chaise Ergonomique', price: 199.99, category_id: 3 }
+          { id: 1, name: 'Smartphone X1', price: 699.99, category_id: '1', category_name: 'Électronique' },
+          { id: 2, name: 'Laptop Pro', price: 1200, category_id: '1', category_name: 'Électronique' },
+          { id: 3, name: 'Tablette Ultra', price: 499.99, category_id: '1', category_name: 'Électronique' },
+          { id: 4, name: 'Chaise Ergonomique', price: 199.99, category_id: '3', category_name: 'Maison' }
+        ];
+        this.categories = [
+          { id: '1', name: 'Électronique' },
+          { id: '2', name: 'Vêtements' },
+          { id: '3', name: 'Maison' }
         ];
       }
     });
@@ -979,57 +1025,90 @@ export class ProductsComponent implements OnInit {
 
   loadCategories(): void {
     this.categoryService.getCategories().subscribe({
-      next: (data) => {
+      next: (data: any) => {
         const payload = Array.isArray(data) ? data : (data.data || []);
         this.categories = payload;
-        // map category names into existing products if needed
-        if (this.products.length) {
-          const map = new Map(this.categories.map(c => [c.id, c.name]));
-          this.products = this.products.map(prod => ({
-            ...prod,
-            category_name: prod.category_name || (prod.category_id ? map.get(prod.category_id) : undefined)
-          }));
-        }
+        console.log('Loaded categories:', this.categories);
       },
       error: (err) => {
         console.error('Error loading categories for products:', err);
+        // Données de démo
+        this.categories = [
+          { id: '1', name: 'Électronique' },
+          { id: '2', name: 'Vêtements' },
+          { id: '3', name: 'Maison' }
+        ];
       }
     });
   }
 
   openForm(): void {
     this.editingId = null;
-    this.formData = { id: 0, name: '', price: 0, category_id: 0 };
+    this.formData = { id: 0, name: '', price: 0, category_id: '', stock: 0 };
+    this.loadCategories(); // Reload categories when opening form
     this.showForm = true;
   }
 
   editProduct(product: Product): void {
-    this.editingId = product.id;
-    this.formData = { ...product };
+    this.editingId = String(product.id ?? '');
+    this.formData = { 
+      ...product, 
+      category_id: String(product.category_id || ''),
+      price: Number(product.price),
+      stock: Number(product.stock || 0)
+    };
+    // Always reload categories to ensure we have the latest ones
+    this.loadCategories();
     this.showForm = true;
   }
 
   saveProduct(): void {
+    if (this.isSaving) return;
+
+    // Validate required fields
+    if (!this.formData.name?.trim() || !this.formData.category_id) {
+      return;
+    }
+
+    this.isSaving = true;
+
+    // Create clean payload without undefined fields
+    const payload = Object.fromEntries(
+      Object.entries(this.formData).filter(([key, value]) => value !== undefined && key !== 'id')
+    );
+
+    console.log('Saving product:', { editingId: this.editingId, formData: this.formData, payload, selectedCategory: this.categories.find(c => String(c.id) === String(this.formData.category_id)) });
+
     if (this.editingId) {
-      this.productService.updateProduct(this.editingId, this.formData).subscribe({
+      this.productService.updateProduct(this.editingId, payload).subscribe({
         next: () => {
+          console.log('Product updated successfully');
           this.loadProducts();
+          this.isSaving = false;
           this.closeForm();
         },
-        error: (err) => console.error('Error updating product:', err)
+        error: (err) => {
+          console.error('Error updating product:', err);
+          this.isSaving = false;
+        }
       });
     } else {
-      this.productService.createProduct(this.formData).subscribe({
+      this.productService.createProduct(payload as Product).subscribe({
         next: () => {
+          console.log('Product created successfully');
           this.loadProducts();
+          this.isSaving = false;
           this.closeForm();
         },
-        error: (err) => console.error('Error creating product:', err)
+        error: (err) => {
+          console.error('Error creating product:', err);
+          this.isSaving = false;
+        }
       });
     }
   }
 
-  deleteProduct(id: number): void {
+  deleteProduct(id: string | number): void {
     if (confirm('Êtes-vous sûr ?')) {
       this.productService.deleteProduct(id).subscribe({
         next: () => {
@@ -1043,13 +1122,14 @@ export class ProductsComponent implements OnInit {
   closeForm(): void {
     this.showForm = false;
     this.editingId = null;
+    this.isSaving = false;
   }
 
   getTotalValue(): number {
     return this.products.reduce((total, product) => total + product.price, 0);
   }
 
-  trackByProductId(index: number, product: Product): number {
+  trackByProductId(index: number, product: Product): any {
     return product.id;
   }
 }

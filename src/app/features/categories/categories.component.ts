@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CategoryService, Category } from '../../core/services/category.service';
+import { DashboardService } from '../../core/services/dashboard.service';
 
 @Component({
   selector: 'app-categories',
@@ -25,7 +26,7 @@ import { CategoryService, Category } from '../../core/services/category.service'
         <tbody>
           <tr *ngFor="let category of categories">
             <td>{{ category.name | uppercase }}</td>
-            <td>0</td>
+            <td>{{ productCounts[category.name] || 0 }}</td>
             <td>
               <button class="btn btn-small btn-edit" (click)="editCategory(category)">MODIFIER</button>
               <button class="btn btn-small btn-delete" (click)="deleteCategory(category.id)">SUPPRIMER</button>
@@ -317,14 +318,15 @@ import { CategoryService, Category } from '../../core/services/category.service'
 })
 export class CategoriesComponent implements OnInit {
   categories: Category[] = [];
+  productCounts: Record<string, number> = {};
   showForm = false;
-  editingId: number | null = null;
+  editingId: string | null = null;
   formData: Category = {
-    id: 0,
+    id: '',
     name: ''
   };
 
-  constructor(private categoryService: CategoryService) {}
+  constructor(private categoryService: CategoryService, private dashboardService: DashboardService) {}
 
   ngOnInit(): void {
     this.loadCategories();
@@ -332,18 +334,34 @@ export class CategoriesComponent implements OnInit {
 
   loadCategories(): void {
     this.categoryService.getCategories().subscribe({
-      next: (data) => {
+      next: (data: any) => {
         // API may return an array or an object with a `data` field
         this.categories = Array.isArray(data) ? data : (data.data || []);
+        this.loadProductCounts();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error loading categories:', err);
         // Données de démo
         this.categories = [
-          { id: 1, name: 'Électronique' },
-          { id: 2, name: 'Vêtements' },
-          { id: 3, name: 'Maison' }
+          { id: '1', name: 'Électronique' },
+          { id: '2', name: 'Vêtements' },
+          { id: '3', name: 'Maison' }
         ];
+        this.loadProductCounts();
+      }
+    });
+  }
+
+  loadProductCounts(): void {
+    this.dashboardService.getProductsByCategory().subscribe({
+      next: (data: any[]) => {
+        this.productCounts = {};
+        data.forEach(item => {
+          this.productCounts[item.name] = item.count || 0;
+        });
+      },
+      error: (err) => {
+        console.error('Error loading product counts:', err);
       }
     });
   }
@@ -355,7 +373,7 @@ export class CategoriesComponent implements OnInit {
   }
 
   editCategory(category: Category): void {
-    this.editingId = category.id;
+    this.editingId = String(category.id ?? '');
     this.formData = { ...category };
     this.showForm = true;
   }
@@ -370,7 +388,9 @@ export class CategoriesComponent implements OnInit {
         error: (err) => console.error('Error updating category:', err)
       });
     } else {
-      this.categoryService.createCategory(this.formData).subscribe({
+      // For new categories, exclude the id field since Firebase generates it
+      const { id, ...categoryData } = this.formData;
+      this.categoryService.createCategory(categoryData).subscribe({
         next: () => {
           this.loadCategories();
           this.closeForm();
@@ -380,7 +400,7 @@ export class CategoriesComponent implements OnInit {
     }
   }
 
-  deleteCategory(id: number): void {
+  deleteCategory(id: string | number): void {
     if (confirm('Êtes-vous sûr ?')) {
       this.categoryService.deleteCategory(id).subscribe({
         next: () => {

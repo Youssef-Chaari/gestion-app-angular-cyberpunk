@@ -683,12 +683,12 @@ export class CartComponent {
     this.total = this.items.reduce((s, it) => s + (it.product.price * it.quantity), 0);
   }
 
-  updateQuantity(productId: number, qty: any) {
+  updateQuantity(productId: string | number, qty: any) {
     const n = Math.max(1, Number(qty) || 1);
     this.cart.update(productId, n);
   }
 
-  removeItem(productId: number) {
+  removeItem(productId: string | number) {
     this.cart.remove(productId);
   }
 
@@ -700,7 +700,7 @@ export class CartComponent {
     this.router.navigate(['/shop/checkout']);
   }
 
-  trackByItemId(index: number, item: CartItem): number {
+  trackByItemId(index: number, item: CartItem): any {
     return item.product.id;
   }
 }

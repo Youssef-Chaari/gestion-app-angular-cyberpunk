@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService, User } from '../../core/services/auth.service';
+import { FirestoreOrderService } from '../../core/services/firestore-order.service';
 
 interface Order {
-  id: number;
-  created_at: string;
+  id: string;
+  created_at: string | any;
   total: number;
   items: OrderItem[];
 }
@@ -689,15 +690,35 @@ export class ProfileComponent implements OnInit {
   orders: Order[] = [];
   currentUser: User | null = null;
 
-  constructor(private authService: AuthService) {
+  constructor(private authService: AuthService, private ordersService: FirestoreOrderService) {
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
+      if (user && user.id) {
+        this.loadOrdersForUser(user.id.toString());
+      } else {
+        this.orders = [];
+      }
     });
   }
 
   ngOnInit(): void {
-    const raw = localStorage.getItem('app_orders');
-    this.orders = raw ? JSON.parse(raw) : [];
+    // orders will be loaded via Firestore when user is available
+  }
+
+  private loadOrdersForUser(userId: string) {
+    this.ordersService.getOrdersByUser(userId).subscribe(list => {
+      // Normalize created_at to string for existing UI helpers
+      this.orders = list.map(o => ({
+        id: o.id,
+        created_at: o.created_at && typeof o.created_at === 'object' && 'toDate' in o.created_at ? o.created_at.toDate().toISOString() : (o.created_at || o.createdAt || new Date().toISOString()),
+        total: o.total || 0,
+        items: o.items || []
+      }));
+    }, () => {
+      // fallback to local storage if Firestore fails
+      const raw = localStorage.getItem('app_orders');
+      this.orders = raw ? JSON.parse(raw) : [];
+    });
   }
 
   getRoleLabel(role: string): string {
@@ -731,7 +752,7 @@ export class ProfileComponent implements OnInit {
     });
   }
 
-  trackByOrderId(index: number, order: Order): number {
+  trackByOrderId(index: number, order: Order): string {
     return order.id;
   }
 }

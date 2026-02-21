@@ -86,6 +86,14 @@ import { CartService } from '../../core/services/cart.service';
             </div>
           </div>
 
+          <!-- Stock Status -->
+          <div class="product-stock" [class.out-of-stock]="!(product.stock && product.stock > 0)">
+            <span class="stock-icon" *ngIf="product.stock && product.stock > 0">✅</span>
+            <span class="stock-icon" *ngIf="!(product.stock && product.stock > 0)">❌</span>
+            <span class="stock-label" *ngIf="product.stock && product.stock > 0">PRODUIT EN STOCK</span>
+            <span class="stock-label" *ngIf="!(product.stock && product.stock > 0)">PRODUIT HORS STOCK</span>
+          </div>
+
           <div class="card-actions">
             <button class="btn btn-secondary btn-view"
                     [routerLink]="['/shop', 'product', product.id]"
@@ -96,9 +104,10 @@ import { CartService } from '../../core/services/cart.service';
 
             <button class="btn btn-primary btn-add-cart"
                     (click)="addToCart(product)"
-                    title="Ajouter au panier">
+                    [disabled]="!(product.stock && product.stock > 0)"
+                    [title]="(product.stock && product.stock > 0) ? 'Ajouter au panier' : 'Produit hors stock'">
               <span class="btn-icon">🛒</span>
-              <span class="btn-text">AJOUTER</span>
+              <span class="btn-text">{{ (product.stock && product.stock > 0) ? 'AJOUTER' : 'HORS STOCK' }}</span>
             </button>
           </div>
 
@@ -404,6 +413,36 @@ import { CartService } from '../../core/services/cart.service';
       margin: 0;
     }
 
+    /* Stock Info */
+    .product-stock {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      margin: 1rem 0;
+      background: rgba(0, 255, 136, 0.1);
+      border-left: 3px solid #00ff88;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #00ff88;
+    }
+
+    .product-stock.out-of-stock {
+      background: rgba(255, 0, 110, 0.1);
+      border-left-color: #ff006e;
+      color: #ff006e;
+    }
+
+    .stock-icon {
+      font-size: 1rem;
+    }
+
+    .stock-label {
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
     .card-actions {
       display: flex;
       gap: 1rem;
@@ -461,6 +500,19 @@ import { CartService } from '../../core/services/cart.service';
       background: linear-gradient(135deg, #00cc6a, #00ff88);
       box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
       transform: translateY(-2px);
+    }
+
+    .btn-primary:disabled {
+      background: linear-gradient(135deg, #666, #555);
+      color: #999;
+      border-color: #666;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .btn-primary:disabled:hover {
+      transform: none;
+      box-shadow: none;
     }
 
     .card-overlay {
@@ -604,7 +656,7 @@ export class ProductListComponent implements OnInit {
 
   loadProducts(): void {
     this.productService.getProducts().subscribe({
-      next: (data) => {
+      next: (data: any) => {
         const payload = Array.isArray(data) ? data : (data.data || []);
         this.products = payload.map((p: any) => ({
           id: p.id,
@@ -612,7 +664,8 @@ export class ProductListComponent implements OnInit {
           price: Number(p.price),
           category_id: p.category_id,
           description: p.description,
-          category_name: p.category_name
+          category_name: p.category_name,
+          stock: p.stock || 0
         }));
         this.filteredProducts = [...this.products];
       },
@@ -684,7 +737,7 @@ export class ProductListComponent implements OnInit {
     }, 3000);
   }
 
-  trackByProductId(index: number, product: Product): number {
+  trackByProductId(index: number, product: Product): any {
     return product.id;
   }
 }

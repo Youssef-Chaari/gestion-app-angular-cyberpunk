@@ -1,16 +1,19 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { DashboardService } from '../../core/services/dashboard.service';
 import Chart from 'chart.js/auto';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   template: `
     <div class="dashboard">
       <div class="dashboard-header">
-        <h1>⚡ TABLEAU DE BORD</h1>
+        <div class="header-top">
+          <h1>⚡ TABLEAU DE BORD</h1>
+        </div>
       </div>
 
       <div class="kpi-section">
@@ -61,6 +64,13 @@ import Chart from 'chart.js/auto';
       margin-bottom: 2rem;
     }
 
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2rem;
+    }
+
     .dashboard-header h1 {
       font-size: 2.5rem;
       color: #00ff88;
@@ -69,6 +79,18 @@ import Chart from 'chart.js/auto';
       text-transform: uppercase;
       animation: glow 2s ease-in-out infinite;
     }
+
+    @media (max-width: 768px) {
+      .header-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .dashboard-header h1 {
+        font-size: 2rem;
+      }
+    }
+
 
     .kpi-section {
       display: grid;

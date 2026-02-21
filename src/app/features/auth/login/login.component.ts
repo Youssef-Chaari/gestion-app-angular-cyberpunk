@@ -244,7 +244,12 @@ export class LoginComponent {
       next: (response) => {
         this.loading = false;
         if (response.success) {
-          this.router.navigate(['/dashboard']);
+          const user = this.authService.getCurrentUser();
+          if (user && user.role === 'admin') {
+            this.router.navigate(['/dashboard']);
+          } else {
+            this.router.navigate(['/shop']);
+          }
         } else {
           this.error = response.message || 'Erreur de connexion';
         }
