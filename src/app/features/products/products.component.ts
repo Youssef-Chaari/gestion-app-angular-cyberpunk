@@ -1001,7 +1001,11 @@ export class ProductsComponent implements OnInit {
           stock: Number(p.stock || 0),
           category_name: p.category_name
         }));
-        this.categories = data.categories;
+        // Ensure categories have proper string IDs
+        this.categories = data.categories.map(c => ({
+          ...c,
+          id: String(c.id)
+        }));
         console.log('Loaded products:', this.products.map(p => ({ id: p.id, category_id: p.category_id, category_name: p.category_name })));
         console.log('Loaded categories:', this.categories);
       },
@@ -1023,29 +1027,10 @@ export class ProductsComponent implements OnInit {
     });
   }
 
-  loadCategories(): void {
-    this.categoryService.getCategories().subscribe({
-      next: (data: any) => {
-        const payload = Array.isArray(data) ? data : (data.data || []);
-        this.categories = payload;
-        console.log('Loaded categories:', this.categories);
-      },
-      error: (err) => {
-        console.error('Error loading categories for products:', err);
-        // Données de démo
-        this.categories = [
-          { id: '1', name: 'Électronique' },
-          { id: '2', name: 'Vêtements' },
-          { id: '3', name: 'Maison' }
-        ];
-      }
-    });
-  }
-
   openForm(): void {
     this.editingId = null;
     this.formData = { id: 0, name: '', price: 0, category_id: '', stock: 0 };
-    this.loadCategories(); // Reload categories when opening form
+    // Use already-loaded categories; don't reload
     this.showForm = true;
   }
 
@@ -1057,8 +1042,7 @@ export class ProductsComponent implements OnInit {
       price: Number(product.price),
       stock: Number(product.stock || 0)
     };
-    // Always reload categories to ensure we have the latest ones
-    this.loadCategories();
+    // Use already-loaded categories; don't reload
     this.showForm = true;
   }
 
@@ -1072,10 +1056,14 @@ export class ProductsComponent implements OnInit {
 
     this.isSaving = true;
 
-    // Create clean payload without undefined fields
-    const payload = Object.fromEntries(
-      Object.entries(this.formData).filter(([key, value]) => value !== undefined && key !== 'id')
-    );
+    // Create clean payload with proper field mapping for Firestore
+    const payload = {
+      name: this.formData.name,
+      price: Number(this.formData.price),
+      stock: Number(this.formData.stock),
+      categoryId: String(this.formData.category_id),  // Map to categoryId for Firestore
+      description: this.formData.description || ''
+    };
 
     console.log('Saving product:', { editingId: this.editingId, formData: this.formData, payload, selectedCategory: this.categories.find(c => String(c.id) === String(this.formData.category_id)) });
 
