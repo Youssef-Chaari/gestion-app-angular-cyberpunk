@@ -69,6 +69,10 @@ import { CartService } from '../../core/services/cart.service';
             </div>
           </div>
 
+          <div class="card-image" *ngIf="product.image">
+            <img [src]="product.image" alt="{{ product.name }}" class="product-img">
+          </div>
+
           <div class="card-body">
             <h3 class="product-name">{{ product.name }}</h3>
 
@@ -356,6 +360,25 @@ import { CartService } from '../../core/services/cart.service';
       font-size: 0.75rem;
       color: rgba(0, 255, 136, 0.6);
       font-family: 'Space Mono', monospace;
+    }
+
+    .card-image {
+      width: 100%;
+      height: 200px;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+      background: rgba(0, 255, 136, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .product-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
     }
 
     .card-body {
@@ -663,7 +686,8 @@ export class ProductListComponent implements OnInit {
           category_id: p.categoryId || p.category_id,
           description: p.description,
           category_name: p.category_name,
-          stock: p.stock || 0
+          stock: p.stock || 0,
+          image: p.image
         }));
         this.filteredProducts = [...this.products];
         

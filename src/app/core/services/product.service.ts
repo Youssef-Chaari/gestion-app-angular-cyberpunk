@@ -28,6 +28,7 @@ export interface Product {
   description?: string;
   created_at?: string;
   stock?: number;
+  image?: string;
 }
 
 @Injectable({ providedIn: 'root' })
