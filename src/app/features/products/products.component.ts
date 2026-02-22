@@ -38,13 +38,6 @@ import { CategoryService, Category } from '../../core/services/category.service'
             <p>Catégories</p>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon">💰</div>
-          <div class="stat-info">
-            <h3>TND{{ getTotalValue() | number:'1.0-0' }}</h3>
-            <p>Valeur totale</p>
-          </div>
-        </div>
       </div>
 
       <div class="products-table-container">

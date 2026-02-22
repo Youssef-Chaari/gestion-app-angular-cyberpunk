@@ -67,7 +67,6 @@ import { CartService } from '../../core/services/cart.service';
                 {{ product.category_name || 'Général' }}
               </span>
             </div>
-            <div class="product-id">ID: {{ product.id }}</div>
           </div>
 
           <div class="card-body">
@@ -651,39 +650,32 @@ export class ProductListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadProducts();
-    this.loadCategories();
   }
 
   loadProducts(): void {
-    this.productService.getProducts().subscribe({
+    this.productService.getProductsWithCategories().subscribe({
       next: (data: any) => {
-        const payload = Array.isArray(data) ? data : (data.data || []);
+        const payload = data.products || [];
         this.products = payload.map((p: any) => ({
           id: p.id,
           name: p.name,
           price: Number(p.price),
-          category_id: p.category_id,
+          category_id: p.categoryId || p.category_id,
           description: p.description,
           category_name: p.category_name,
           stock: p.stock || 0
         }));
         this.filteredProducts = [...this.products];
+        
+        // Also load categories for the filter dropdown
+        this.categories = data.categories || [];
       },
       error: () => {
         this.products = [];
         this.filteredProducts = [];
+        this.categories = [];
       }
     });
-  }
-
-  loadCategories(): void {
-    // For now, we'll create some sample categories
-    // In a real app, you'd fetch these from the API
-    this.categories = [
-      { id: 1, name: 'Électronique' },
-      { id: 2, name: 'Vêtements' },
-      { id: 3, name: 'Maison' }
-    ];
   }
 
   filterProducts(): void {
