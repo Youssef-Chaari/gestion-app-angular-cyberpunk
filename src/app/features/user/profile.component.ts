@@ -1098,12 +1098,19 @@ export class ProfileComponent implements OnInit {
     return role === 'admin' ? 'Administrateur' : 'Utilisateur';
   }
 
+  getRoleClass(role: string): string {
+    return role === 'admin' ? 'admin' : 'user';
+  }
 
+
+
+  getUserDisplayName(): string {
+    if (!this.currentUser) return 'N/A';
 
     const firstName = (this.currentUser as any).firstName || '';
     const lastName = (this.currentUser as any).lastName || '';
     const fullName = `${firstName} ${lastName}`.trim();
-    
+
     return fullName || this.currentUser.email || 'Utilisateur';
   }
 
