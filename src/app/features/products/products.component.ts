@@ -72,6 +72,10 @@ import { CategoryService, Category } from '../../core/services/category.service'
                 [class.even]="products.indexOf(product) % 2 === 0">
               <td class="col-product">
                 <div class="product-info">
+                  <div class="product-thumbnail-container" *ngIf="product.image" (click)="viewProductImage(product)">
+                    <img [src]="product.image" alt="{{ product.name }}" class="product-thumbnail" title="Cliquer pour agrandir">
+                    <div class="thumbnail-hover">🔍</div>
+                  </div>
                   <div class="product-name">{{ product.name | uppercase }}</div>
                 </div>
               </td>
@@ -196,6 +200,38 @@ import { CategoryService, Category } from '../../core/services/category.service'
                   </option>
                 </select>
               </div>
+
+              <div class="form-group form-group-full">
+                <label class="form-label">
+                  <span class="label-icon">🖼️</span>
+                  IMAGE DU PRODUIT
+                </label>
+                <div class="image-input-group">
+                  <div class="image-option">
+                    <label class="file-input-label">
+                      <span class="upload-icon">📁</span>
+                      <span class="upload-text">Télécharger une image</span>
+                      <input type="file" 
+                             accept="image/*" 
+                             (change)="onFileSelected($event)"
+                             class="file-input"
+                             style="display: none;">
+                    </label>
+                  </div>
+                  <div class="image-divider">OU</div>
+                  <div class="image-option">
+                    <input type="text"
+                           class="form-input"
+                           [(ngModel)]="formData.image"
+                           name="image"
+                           placeholder="https://example.com/image.jpg"
+                           (change)="onImageChange()">
+                  </div>
+                </div>
+                <div class="image-preview" *ngIf="formData.image">
+                  <img [src]="formData.image" alt="Aperçu du produit" class="preview-img">
+                </div>
+              </div>
             </div>
 
             <div class="form-actions">
@@ -209,6 +245,20 @@ import { CategoryService, Category } from '../../core/services/category.service'
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <!-- Image View Modal -->
+      <div class="image-modal-overlay" *ngIf="selectedProductImage" (click)="closeImageView()">
+        <div class="image-modal-content" (click)="$event.stopPropagation()">
+          <button class="image-modal-close" (click)="closeImageView()" title="Fermer">✕</button>
+          <div class="image-modal-body">
+            <img [src]="selectedProductImage.image" [alt]="selectedProductImage.name" class="modal-image">
+            <div class="image-info">
+              <h3>{{ selectedProductImage.name | uppercase }}</h3>
+              <p class="category">{{ selectedProductImage.category_name | uppercase }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -424,8 +474,44 @@ import { CategoryService, Category } from '../../core/services/category.service'
 
     .product-info {
       display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .product-thumbnail {
+      width: 50px;
+      height: 50px;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      flex-shrink: 0;
+      background: rgba(0, 255, 136, 0.05);
+    }
+
+    .product-thumbnail-container {
+      position: relative;
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    .thumbnail-hover {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.2rem;
+      opacity: 0;
+      transition: all 0.3s ease;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+
+    .product-thumbnail-container:hover .thumbnail-hover {
+      opacity: 1;
+    }
+
+    .product-thumbnail-container:hover .product-thumbnail {
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+      border-color: #00ff88;
     }
 
     .product-name {
@@ -740,6 +826,80 @@ import { CategoryService, Category } from '../../core/services/category.service'
       color: #00ff88;
     }
 
+    /* Image Upload */
+    .image-input-group {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .image-option {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .file-input-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1.5rem;
+      border: 2px dashed rgba(0, 255, 136, 0.4);
+      border-radius: 8px;
+      background: rgba(0, 255, 136, 0.05);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #00ff88;
+      font-family: 'Space Mono', monospace;
+      font-weight: 600;
+    }
+
+    .file-input-label:hover {
+      border-color: #00ff88;
+      background: rgba(0, 255, 136, 0.1);
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+    }
+
+    .upload-icon {
+      font-size: 1.5rem;
+    }
+
+    .upload-text {
+      font-size: 0.9rem;
+    }
+
+    .image-divider {
+      padding: 0 0.5rem;
+      color: rgba(0, 255, 136, 0.5);
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* Image Preview */
+    .image-preview {
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 2px dashed rgba(0, 255, 136, 0.3);
+      border-radius: 8px;
+      background: rgba(0, 255, 136, 0.05);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 150px;
+      overflow: hidden;
+    }
+
+    .preview-img {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 4px;
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+      object-fit: contain;
+    }
+
     /* Form Actions */
     .form-actions {
       display: flex;
@@ -805,6 +965,98 @@ import { CategoryService, Category } from '../../core/services/category.service'
     }
 
     /* Animations */
+    /* Image Modal */
+    .image-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      backdrop-filter: blur(5px);
+      animation: fadeInUp 0.3s ease-out;
+    }
+
+    .image-modal-content {
+      position: relative;
+      max-width: 90%;
+      max-height: 90vh;
+      background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(26, 26, 62, 0.95) 100%);
+      border: 2px solid rgba(0, 255, 136, 0.4);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 50px rgba(0, 255, 136, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    .image-modal-close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(0, 255, 136, 0.2);
+      border: 1px solid rgba(0, 255, 136, 0.4);
+      color: #00ff88;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .image-modal-close:hover {
+      background: rgba(0, 255, 136, 0.3);
+      border-color: #00ff88;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+      transform: scale(1.1);
+    }
+
+    .image-modal-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .modal-image {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 8px;
+      box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+      object-fit: contain;
+      margin-bottom: 1.5rem;
+    }
+
+    .image-info {
+      text-align: center;
+      color: #00ff88;
+      font-family: 'Space Mono', monospace;
+      width: 100%;
+    }
+
+    .image-info h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.5rem;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+
+    .image-info .category {
+      margin: 0;
+      color: rgba(0, 255, 136, 0.7);
+      font-size: 0.9rem;
+    }
+
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -967,6 +1219,7 @@ export class ProductsComponent implements OnInit {
   showForm = false;
   editingId: string | null = null;
   isSaving = false;
+  selectedProductImage: Product | null = null;
   formData: Product = {
     id: '',
     name: '',
@@ -1022,7 +1275,7 @@ export class ProductsComponent implements OnInit {
 
   openForm(): void {
     this.editingId = null;
-    this.formData = { id: 0, name: '', price: 0, category_id: '', stock: 0 };
+    this.formData = { id: 0, name: '', price: 0, category_id: '', stock: 0, image: '' };
     // Use already-loaded categories; don't reload
     this.showForm = true;
   }
@@ -1055,7 +1308,8 @@ export class ProductsComponent implements OnInit {
       price: Number(this.formData.price),
       stock: Number(this.formData.stock),
       categoryId: String(this.formData.category_id),  // Map to categoryId for Firestore
-      description: this.formData.description || ''
+      description: this.formData.description || '',
+      image: this.formData.image || ''
     };
 
     console.log('Saving product:', { editingId: this.editingId, formData: this.formData, payload, selectedCategory: this.categories.find(c => String(c.id) === String(this.formData.category_id)) });
@@ -1112,5 +1366,43 @@ export class ProductsComponent implements OnInit {
 
   trackByProductId(index: number, product: Product): any {
     return product.id;
+  }
+
+  onImageChange(): void {
+    // Image URL is being updated, validation happens on save
+  }
+
+  onFileSelected(event: any): void {
+    const file: File = event.target.files[0];
+    if (file) {
+      // Validate file is an image
+      if (!file.type.startsWith('image/')) {
+        alert('Veuillez sélectionner une image valide');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert('L\'image doit faire moins de 5MB');
+        return;
+      }
+
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.formData.image = e.target.result;
+        console.log('Image selected and converted to base64');
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  viewProductImage(product: Product): void {
+    this.selectedProductImage = product;
+  }
+
+  closeImageView(): void {
+    this.selectedProductImage = null;
   }
 }
