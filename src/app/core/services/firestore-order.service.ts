@@ -3,7 +3,7 @@ import { environment } from '../../../environments/environment';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getFirestore, collection, addDoc, Firestore, query, where, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { from, Observable, forkJoin } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { map, switchMap, catchError } from 'rxjs/operators';
 
 const firebaseApp = getApps().length ? getApp() : initializeApp(environment.firebase || {});
 const db: Firestore = getFirestore(firebaseApp);
@@ -18,10 +18,15 @@ export class FirestoreOrderService {
       switchMap(ref => {
         // Decrement stock for each item in the order
         const stockUpdates = (orderData.items || []).map((item: any) => {
-          const productRef = doc(this.productsCol, String(item.product.id));
+          const productRef = doc(this.productsCol, String(item.productId));
           const currentStock = item.currentStock || 0;
           const newStock = Math.max(0, currentStock - item.quantity);
-          return from(updateDoc(productRef, { stock: newStock }));
+          return from(updateDoc(productRef, { stock: newStock })).pipe(
+            catchError(error => {
+              console.error('Failed to update stock for product', item.productId, error);
+              return from(Promise.resolve()); // Continue even if stock update fails
+            })
+          );
         });
 
         if (stockUpdates.length === 0) {
@@ -29,7 +34,8 @@ export class FirestoreOrderService {
         }
 
         return forkJoin(stockUpdates).pipe(
-          map(() => ({ id: ref.id }))
+          map(() => ({ id: ref.id })),
+          catchError(() => from(Promise.resolve({ id: ref.id }))) // Ignore stock update errors
         );
       })
     );
