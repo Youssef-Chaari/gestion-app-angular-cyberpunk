@@ -54,6 +54,7 @@ export class CheckoutComponent {
         return;
       }
 
+      const now = new Date();
       const order = {
         name: this.name,
         address: this.address,
@@ -61,8 +62,9 @@ export class CheckoutComponent {
           ...it,
           currentStock: currentProducts[index]?.stock || 0
         })),
-        total: items.reduce((s: any, it: any) => s + it.product.price * it.quantity, 0),
-        orderDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+        totalAmount: items.reduce((s: any, it: any) => s + it.product.price * it.quantity, 0),
+        createdAt: now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) + ' at ' + now.toTimeString().split(' ')[0] + ' UTC+' + (now.getTimezoneOffset() === 0 ? '0' : Math.abs(now.getTimezoneOffset() / 60)),
+        orderDate: now.toISOString().split('T')[0],
         userId: (this.auth.getCurrentUser() as any)?.uid || null
       };
 
