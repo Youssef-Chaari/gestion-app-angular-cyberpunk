@@ -1264,16 +1264,18 @@ export class ProfileComponent implements OnInit {
     return 'Inconnu';
   }
 
-  isRecentOrder(createdAt: string): boolean {
-    const orderDate = new Date(createdAt);
+  isRecentOrder(createdAt: any): boolean {
+    const orderDate = this.parseCreatedAtDate(createdAt);
+    if (isNaN(orderDate.getTime())) return false;
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - orderDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays <= 7; // Consider orders from last 7 days as recent
   }
 
-  formatDate(dateString: string): string {
-    const date = new Date(dateString);
+  formatDate(dateString: any): string {
+    const date = this.parseCreatedAtDate(dateString);
+    if (isNaN(date.getTime())) return '--';
     return date.toLocaleDateString('fr-FR', {
       year: 'numeric',
       month: 'long',
@@ -1293,11 +1295,27 @@ export class ProfileComponent implements OnInit {
     try {
       // Handle Firestore Timestamp
       if (createdAt && typeof createdAt === 'object' && createdAt.toDate) {
-        return createdAt.toDate();
+        const tsDate = createdAt.toDate();
+        if (tsDate instanceof Date && !isNaN(tsDate.getTime())) return tsDate;
       }
+
+      // Handle Firestore seconds timestamp object
+      if (createdAt && typeof createdAt === 'object' && typeof createdAt.seconds === 'number') {
+        const tsDate = new Date(createdAt.seconds * 1000);
+        if (!isNaN(tsDate.getTime())) return tsDate;
+      }
+
+      // Handle numeric timestamp (sec/ms)
+      if (typeof createdAt === 'number') {
+        const tsDate = new Date(createdAt < 1e12 ? createdAt * 1000 : createdAt);
+        if (!isNaN(tsDate.getTime())) return tsDate;
+      }
+
+      const rawDate = String(createdAt).trim();
+      if (!rawDate) return new Date(0);
       
       // Handle format: "22 February 2026 at 01:25:05 UTC+1"
-      const match = createdAt.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+at\s+(\d{2}):(\d{2}):(\d{2})\s+UTC([+-]\d+)/);
+      const match = rawDate.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+at\s+(\d{2}):(\d{2}):(\d{2})\s+UTC([+-]\d+)/);
       if (match) {
         const [, day, month, year, hours, minutes, seconds, timezone] = match;
         const monthNames: { [key: string]: number } = {
@@ -1315,9 +1333,15 @@ export class ProfileComponent implements OnInit {
           return date;
         }
       }
+
+      // Normalize YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+        const dayDate = new Date(`${rawDate}T00:00:00`);
+        if (!isNaN(dayDate.getTime())) return dayDate;
+      }
       
       // Try parsing as ISO string
-      const isoDate = new Date(createdAt);
+      const isoDate = new Date(rawDate);
       if (!isNaN(isoDate.getTime())) {
         return isoDate;
       }
