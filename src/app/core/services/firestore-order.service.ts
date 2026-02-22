@@ -21,10 +21,12 @@ export class FirestoreOrderService {
           const productRef = doc(this.productsCol, String(item.productId));
           const currentStock = item.currentStock || 0;
           const newStock = Math.max(0, currentStock - item.quantity);
+          console.log(`Updating stock for product ${item.productId}: ${currentStock} - ${item.quantity} = ${newStock}`);
           return from(updateDoc(productRef, { stock: newStock })).pipe(
             catchError(error => {
               console.error('Failed to update stock for product', item.productId, error);
-              return from(Promise.resolve()); // Continue even if stock update fails
+              // Return empty observable to continue even if stock update fails
+              return from(Promise.resolve(null));
             })
           );
         });
@@ -34,8 +36,14 @@ export class FirestoreOrderService {
         }
 
         return forkJoin(stockUpdates).pipe(
-          map(() => ({ id: ref.id })),
-          catchError(() => from(Promise.resolve({ id: ref.id }))) // Ignore stock update errors
+          map(() => {
+            console.log('All stock updates completed for order', ref.id);
+            return { id: ref.id };
+          }),
+          catchError((err) => {
+            console.error('Stock update operation failed:', err);
+            return from(Promise.resolve({ id: ref.id }));
+          })
         );
       })
     );
