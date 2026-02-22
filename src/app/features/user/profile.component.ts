@@ -693,9 +693,21 @@ export class ProfileComponent implements OnInit {
   constructor(private authService: AuthService, private ordersService: FirestoreOrderService) {
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
-      if (user && user.id) {
-        this.loadOrdersForUser(user.id.toString());
+      console.log('Profile - Current user:', user);
+      console.log('Profile - uid:', (user as any)?.uid);
+      console.log('Profile - id:', user?.id);
+      if (user) {
+        // Use Firebase UID if available, otherwise use id
+        const userId = (user as any).uid || user.id;
+        if (userId) {
+          console.log('Profile - Loading orders for userId:', userId);
+          this.loadOrdersForUser(userId.toString());
+        } else {
+          console.log('Profile - No userId found!');
+          this.orders = [];
+        }
       } else {
+        console.log('Profile - No current user');
         this.orders = [];
       }
     });
@@ -706,18 +718,30 @@ export class ProfileComponent implements OnInit {
   }
 
   private loadOrdersForUser(userId: string) {
-    this.ordersService.getOrdersByUser(userId).subscribe(list => {
-      // Normalize created_at to string for existing UI helpers
-      this.orders = list.map(o => ({
-        id: o.id,
-        created_at: o.orderDate || o.created_at || o.createdAt || new Date().toISOString(),
-        total: o.totalAmount || o.total || (o.items ? o.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0) : 0),
-        items: o.items || []
-      }));
-    }, () => {
-      // fallback to local storage if Firestore fails
-      const raw = localStorage.getItem('app_orders');
-      this.orders = raw ? JSON.parse(raw) : [];
+    console.log('➤ Starting to load orders for userId:', userId);
+    this.ordersService.getOrdersByUser(userId).subscribe({
+      next: (list) => {
+        console.log('✓ Loaded orders from Firestore:', list);
+        console.log('✓ Number of orders:', list.length);
+        // Normalize created_at to string for existing UI helpers
+        this.orders = list.map(o => {
+          console.log('Processing order:', o);
+          return {
+            id: o.id,
+            created_at: o.orderDate || o.created_at || o.createdAt || new Date().toISOString(),
+            total: o.totalAmount || o.total || (o.items ? o.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0) : 0),
+            items: o.items || []
+          };
+        });
+        console.log('✓ Final orders array:', this.orders);
+      },
+      error: (err) => {
+        console.error('✗ Failed to load orders from Firestore:', err);
+        // fallback to local storage if Firestore fails
+        const raw = localStorage.getItem('app_orders');
+        this.orders = raw ? JSON.parse(raw) : [];
+        console.log('✓ Using fallback from localStorage:', this.orders);
+      }
     });
   }
 

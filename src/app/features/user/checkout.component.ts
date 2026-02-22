@@ -192,6 +192,7 @@ export class CheckoutComponent {
       }
 
       const now = new Date();
+      const currentUser = this.auth.getCurrentUser() as any;
       const order = {
         name: this.name,
         email: this.email,
@@ -209,18 +210,23 @@ export class CheckoutComponent {
         totalAmount: items.reduce((s: any, it: any) => s + it.product.price * it.quantity, 0),
         createdAt: now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) + ' at ' + now.toTimeString().split(' ')[0] + ' UTC+' + (now.getTimezoneOffset() === 0 ? '0' : Math.abs(now.getTimezoneOffset() / 60)),
         orderDate: now.toISOString().split('T')[0],
-        userId: (this.auth.getCurrentUser() as any)?.id || null
+        // Use Firebase UID for Firestore rules compatibility
+        userId: currentUser?.uid || currentUser?.id || null
       };
 
       // create order in Firestore, fallback to localStorage
       this.orders.createOrder(order).subscribe({
         next: (res: any) => {
           this.cart.clear();
-          this.popupService.showSuccess('Commande créée avec succès !', 'Succès');
+          if (res.stockUpdateFailed) {
+            this.popupService.showWarning('Commande créée mais la mise à jour du stock a échoué. Veuillez vérifier les stocks.', 'Attention');
+          } else {
+            this.popupService.showSuccess('Commande créée avec succès ! Stock mis à jour.', 'Succès');
+          }
           this.router.navigate(['/shop/profile']);
         },
         error: (err: any) => {
-          console.error('Order create failed, saving locally', err);
+          console.error('Order creation failed:', err?.message || err);
           const ordersRaw = localStorage.getItem('app_orders');
           const orders = ordersRaw ? JSON.parse(ordersRaw) : [];
           orders.push(Object.assign({ id: Date.now() }, order));

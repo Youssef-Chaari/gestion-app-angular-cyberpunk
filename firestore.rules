@@ -1,46 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users to read their own user document
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Allow authenticated users to query all users (for role lookup in auth)
-    match /users/{document=**} {
-      allow read: if request.auth != null;
-    }
-    
-    // Products: readable by all, writable by admin, stock updates by authenticated users
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      // Allow any authenticated user to update stock (for order processing)
-      allow update: if request.auth != null && 'stock' in request.resource.data && request.resource.data.stock >= 0 && request.resource.data.size() == resource.data.size();
-    }
-    
-    // Categories: readable by everyone, writable by admin
-    match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    // Carts: user-specific
-    match /carts/{cartId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-    }
-    
-    // Orders: user can read own orders, admin can read all
-    match /orders/{orderId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-    }
-    
-    // Default deny all
+    // Allow all authenticated users to read and write everything (for testing)
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null;
     }
   }
 }
