@@ -18,7 +18,7 @@ export class FirestoreOrderService {
       switchMap(ref => {
         // Decrement stock for each item in the order
         const stockUpdates = (orderData.items || []).map((item: any) => {
-          const productRef = doc(this.productsCol, String(item.productId));
+          const productRef = doc(this.productsCol, String(item.product.id));
           const currentStock = item.currentStock || 0;
           const newStock = Math.max(0, currentStock - item.quantity);
           return from(updateDoc(productRef, { stock: newStock }));

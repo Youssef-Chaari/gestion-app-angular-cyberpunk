@@ -48,12 +48,12 @@ import { FirestoreOrderService } from '../../core/services/firestore-order.servi
           <div class="order-card" *ngFor="let order of orders; trackBy: trackByOrderId">
             <div class="order-header">
               <div class="order-id">#{{ order.id }}</div>
-              <div class="order-date">{{ formatDate(order.created_at) }}</div>
+              <div class="order-date">{{ order.createdAt }}</div>
             </div>
             <div class="order-details">
               <div class="order-total">
                 <span class="total-label">Total:</span>
-                <span class="total-amount">{{ order.total | number:'1.2-2' }} TND</span>
+                <span class="total-amount">{{ order.totalAmount | number:'1.2-2' }} TND</span>
               </div>
               <div class="order-items">
                 <span class="items-count">{{ order.items?.length || 0 }} article(s)</span>
@@ -329,7 +329,7 @@ export class AdminOrdersComponent implements OnInit {
   }
 
   getTotalRevenue(): number {
-    return this.orders.reduce((total, order) => total + (order.total || 0), 0);
+    return this.orders.reduce((total, order) => total + (order.totalAmount || 0), 0);
   }
 
   trackByOrderId(index: number, order: any): any {
