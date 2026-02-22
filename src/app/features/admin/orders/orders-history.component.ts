@@ -688,11 +688,10 @@ export class OrdersHistoryComponent implements OnInit {
         };
       });
 
-      // Sort orders by date in descending order (most recent first)
+      // Sort orders by createdAt in descending order (most recent first)
       this.orders.sort((a, b) => {
-        // Use orderDate if available, otherwise createdAt
-        const dateA = new Date(a.orderDate || a.createdAt || 0);
-        const dateB = new Date(b.orderDate || b.createdAt || 0);
+        const dateA = this.parseCreatedAtDate(a.createdAt);
+        const dateB = this.parseCreatedAtDate(b.createdAt);
         return dateB.getTime() - dateA.getTime();
       });
 
