@@ -150,10 +150,17 @@ import { CategoryService, Category } from '../../core/services/category.service'
                 </label>
                 <input type="text"
                        class="form-input"
+                       [class.error]="validationErrors['name']"
                        [(ngModel)]="formData.name"
                        name="name"
                        placeholder="Nom du produit"
+                       minlength="2"
+                       maxlength="100"
+                       (input)="clearFieldError('name')"
                        required>
+                <div class="error-message" *ngIf="validationErrors['name']">
+                  {{ validationErrors['name'] }}
+                </div>
               </div>
 
               <div class="form-group">
@@ -163,12 +170,18 @@ import { CategoryService, Category } from '../../core/services/category.service'
                 </label>
                 <input type="number"
                        class="form-input"
+                       [class.error]="validationErrors['price']"
                        [(ngModel)]="formData.price"
                        name="price"
                        placeholder="0.00"
                        step="0.01"
-                       min="0"
+                       min="0.01"
+                       max="999999.99"
+                       (input)="clearFieldError('price')"
                        required>
+                <div class="error-message" *ngIf="validationErrors['price']">
+                  {{ validationErrors['price'] }}
+                </div>
               </div>
 
               <div class="form-group">
@@ -178,11 +191,18 @@ import { CategoryService, Category } from '../../core/services/category.service'
                 </label>
                 <input type="number"
                        class="form-input"
+                       [class.error]="validationErrors['stock']"
                        [(ngModel)]="formData.stock"
                        name="stock"
                        placeholder="0"
                        min="0"
+                       max="999999"
+                       step="1"
+                       (input)="clearFieldError('stock')"
                        required>
+                <div class="error-message" *ngIf="validationErrors['stock']">
+                  {{ validationErrors['stock'] }}
+                </div>
               </div>
 
               <div class="form-group form-group-full">
@@ -191,14 +211,19 @@ import { CategoryService, Category } from '../../core/services/category.service'
                   CATÉGORIE
                 </label>
                 <select class="form-select"
+                        [class.error]="validationErrors['category_id']"
                         [(ngModel)]="formData.category_id"
                         name="category_id"
+                        (change)="clearFieldError('category_id')"
                         required>
                   <option value="">Sélectionnez une catégorie</option>
                   <option *ngFor="let category of categories" [value]="category.id.toString()">
                     {{ category.name | uppercase }}
                   </option>
                 </select>
+                <div class="error-message" *ngIf="validationErrors['category_id']">
+                  {{ validationErrors['category_id'] }}
+                </div>
               </div>
 
               <div class="form-group form-group-full">
@@ -207,10 +232,18 @@ import { CategoryService, Category } from '../../core/services/category.service'
                   DESCRIPTION DU PRODUIT
                 </label>
                 <textarea class="form-textarea"
+                          [class.error]="validationErrors['description']"
                           [(ngModel)]="formData.description"
                           name="description"
                           placeholder="Entrez la description détaillée du produit..."
-                          rows="5"></textarea>
+                          minlength="10"
+                          maxlength="1000"
+                          (input)="clearFieldError('description')"
+                          rows="5"
+                          required></textarea>
+                <div class="error-message" *ngIf="validationErrors['description']">
+                  {{ validationErrors['description'] }}
+                </div>
               </div>
 
               <div class="form-group form-group-full">
@@ -234,11 +267,20 @@ import { CategoryService, Category } from '../../core/services/category.service'
                   <div class="image-option">
                     <input type="text"
                            class="form-input"
+                           [class.error]="validationErrors['image']"
                            [(ngModel)]="formData.image"
                            name="image"
                            placeholder="https://example.com/image.jpg"
+                           maxlength="500"
+                           (input)="clearFieldError('image')"
                            (change)="onImageChange()">
                   </div>
+                </div>
+                <div class="error-message" *ngIf="validationErrors['image']">
+                  {{ validationErrors['image'] }}
+                </div>
+                <div class="error-message" *ngIf="validationErrors['general']">
+                  {{ validationErrors['general'] }}
                 </div>
                 <div class="image-preview" *ngIf="formData.image">
                   <img [src]="formData.image" alt="Aperçu du produit" class="preview-img">
@@ -864,6 +906,28 @@ import { CategoryService, Category } from '../../core/services/category.service'
       color: #00ff88;
     }
 
+    /* Error Styles */
+    .form-input.error, .form-select.error, .form-textarea.error {
+      border-color: #ff4444;
+      box-shadow: 0 0 15px rgba(255, 68, 68, 0.3);
+    }
+
+    .error-message {
+      color: #ff4444;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+      font-family: 'Space Mono', monospace;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .error-message::before {
+      content: '⚠️';
+      font-size: 0.9rem;
+    }
+
     /* Image Upload */
     .image-input-group {
       display: flex;
@@ -1252,6 +1316,21 @@ import { CategoryService, Category } from '../../core/services/category.service'
   `]
 })
 export class ProductsComponent implements OnInit {
+  private readonly maxImageUrlLength = 500;
+  private readonly maxImageBase64Length = 5_000_000;
+  private readonly maxImageUploadSizeBytes = 5 * 1024 * 1024;
+  private readonly minImageWidth = 100;
+  private readonly minImageHeight = 100;
+  private readonly allowedImageMimeTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/avif',
+    'image/svg+xml'
+  ];
+  private readonly allowedImageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.svg'];
+
   products: Product[] = [];
   categories: Category[] = [];
   showForm = false;
@@ -1260,6 +1339,7 @@ export class ProductsComponent implements OnInit {
   selectedProductImage: Product | null = null;
   originalImage: string = '';
   imageChanged: boolean = false;
+  validationErrors: { [key: string]: string } = {};
   formData: Product = {
     id: '',
     name: '',
@@ -1319,6 +1399,7 @@ export class ProductsComponent implements OnInit {
     this.editingId = null;
     this.originalImage = '';
     this.imageChanged = false;
+    this.validationErrors = {}; // Clear validation errors
     this.formData = { id: 0, name: '', price: 0, category_id: '', stock: 0, image: '', description: '' };
     // Use already-loaded categories; don't reload
     this.showForm = true;
@@ -1343,15 +1424,96 @@ export class ProductsComponent implements OnInit {
   saveProduct(): void {
     if (this.isSaving) return;
 
-    // Validate required fields
-    if (!this.formData.name?.trim() || !this.formData.category_id) {
+    const errors: { [key: string]: string } = {};
+    const trimmedName = (this.formData.name || '').trim();
+    const trimmedDescription = (this.formData.description || '').trim();
+    const trimmedCategoryId = String(this.formData.category_id || '').trim();
+    const typedImage = (this.formData.image || '').trim();
+    const currentImage = typedImage || (this.originalImage || '').trim();
+    const normalizedPrice = Number(this.formData.price);
+    const normalizedStock = Number(this.formData.stock);
+
+    if (!trimmedName) {
+      errors['name'] = 'Le nom du produit est obligatoire';
+    } else if (trimmedName.length < 2) {
+      errors['name'] = 'Le nom du produit doit contenir au moins 2 caractères';
+    } else if (trimmedName.length > 100) {
+      errors['name'] = 'Le nom du produit ne peut pas dépasser 100 caractères';
+    } else if (!/[a-zA-Z0-9]/.test(trimmedName)) {
+      errors['name'] = 'Le nom du produit doit contenir au moins une lettre ou un chiffre';
+    }
+
+    if (!Number.isFinite(normalizedPrice)) {
+      errors['price'] = 'Le prix est obligatoire';
+    } else if (normalizedPrice < 0.01) {
+      errors['price'] = 'Le prix minimum est de 0,01 TND';
+    } else if (normalizedPrice > 999999.99) {
+      errors['price'] = 'Le prix ne peut pas dépasser 999 999,99 TND';
+    } else if (!/^\d+(\.\d{1,2})?$/.test(String(this.formData.price))) {
+      errors['price'] = 'Le prix ne peut pas avoir plus de 2 décimales';
+    }
+
+    if (!Number.isFinite(normalizedStock)) {
+      errors['stock'] = 'Le stock est obligatoire';
+    } else if (normalizedStock < 0) {
+      errors['stock'] = 'Le stock doit être un nombre positif ou nul';
+    } else if (!Number.isInteger(normalizedStock)) {
+      errors['stock'] = 'Le stock doit être un nombre entier';
+    } else if (normalizedStock > 999999) {
+      errors['stock'] = 'Le stock ne peut pas dépasser 999 999 unités';
+    }
+
+    if (!trimmedCategoryId) {
+      errors['category_id'] = 'La catégorie est obligatoire';
+    } else {
+      const categoryExists = this.categories.some(cat => String(cat.id) === trimmedCategoryId);
+      if (!categoryExists) {
+        errors['category_id'] = 'La catégorie sélectionnée n\'existe pas';
+      }
+    }
+
+    if (!trimmedDescription) {
+      errors['description'] = 'La description est obligatoire';
+    } else if (trimmedDescription.length < 10) {
+      errors['description'] = 'La description doit contenir au moins 10 caractères';
+    } else if (trimmedDescription.length > 1000) {
+      errors['description'] = 'La description ne peut pas dépasser 1000 caractères';
+    }
+
+    const imageError = this.validateImageValue(currentImage, !this.editingId);
+    if (imageError) {
+      errors['image'] = imageError;
+    }
+
+    if (trimmedName) {
+      const existingProduct = this.products.find(p => {
+        const existingName = (p.name || '').toLowerCase().trim();
+        const isSameName = existingName === trimmedName.toLowerCase();
+        const isSameProduct = this.editingId ? String(p.id) === String(this.editingId) : false;
+        return isSameName && !isSameProduct;
+      });
+      if (existingProduct) {
+        errors['name'] = 'Un produit avec ce nom existe déjà';
+      }
+    }
+
+    this.validationErrors = errors;
+    if (Object.keys(errors).length > 0) {
+      const firstErrorField = Object.keys(errors)[0];
+      const element = document.querySelector(`[name="${firstErrorField}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
+
+    // Clear validation errors on successful validation
+    this.validationErrors = {};
 
     this.isSaving = true;
 
     // Determine which image to save
-    let imageToSave = this.formData.image || this.originalImage;
+    let imageToSave = currentImage;
     
     // When editing a product - ALWAYS use original if not explicitly changed
     if (this.editingId && !this.imageChanged) {
@@ -1360,11 +1522,11 @@ export class ProductsComponent implements OnInit {
 
     // Create clean payload with proper field mapping for Firestore
     const payload: any = {
-      name: this.formData.name,
-      price: Number(this.formData.price),
-      stock: Number(this.formData.stock),
-      categoryId: String(this.formData.category_id),  // Map to categoryId for Firestore
-      description: this.formData.description || ''
+      name: trimmedName,
+      price: normalizedPrice,
+      stock: normalizedStock,
+      categoryId: trimmedCategoryId,
+      description: trimmedDescription
     };
 
     // Only include image in payload if we have one
@@ -1392,6 +1554,9 @@ export class ProductsComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error updating product:', err);
+          this.validationErrors = {
+            general: err?.message || 'La mise à jour a échoué. Vérifiez les données saisies.'
+          };
           this.isSaving = false;
         }
       });
@@ -1407,6 +1572,9 @@ export class ProductsComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error creating product:', err);
+          this.validationErrors = {
+            general: err?.message || 'La création a échoué. Vérifiez les données saisies.'
+          };
           this.isSaving = false;
         }
       });
@@ -1430,6 +1598,7 @@ export class ProductsComponent implements OnInit {
     this.originalImage = '';
     this.imageChanged = false;
     this.isSaving = false;
+    this.validationErrors = {}; // Clear validation errors
   }
 
   getTotalValue(): number {
@@ -1443,33 +1612,110 @@ export class ProductsComponent implements OnInit {
   onImageChange(): void {
     // Image URL is being updated, mark as changed
     this.imageChanged = true;
+    this.clearFieldError('image');
   }
 
   onFileSelected(event: any): void {
-    const file: File = event.target.files[0];
-    if (file) {
-      // Validate file is an image
-      if (!file.type.startsWith('image/')) {
-        alert('Veuillez sélectionner une image valide');
+    const input = event?.target as HTMLInputElement | undefined;
+    const file: File | undefined = input?.files?.[0];
+    if (!file) return;
+
+    this.clearFieldError('image');
+
+    if (!this.allowedImageMimeTypes.includes(file.type)) {
+      this.validationErrors['image'] = 'Format non supporté. Utilisez JPG, PNG, WEBP, GIF, AVIF ou SVG.';
+      return;
+    }
+
+    if (file.size > this.maxImageUploadSizeBytes) {
+      this.validationErrors['image'] = 'L\'image importée doit faire moins de 5MB.';
+      return;
+    }
+
+    if (file.size < 1024) {
+      this.validationErrors['image'] = 'Le fichier image semble invalide (trop petit).';
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const previewImage = new Image();
+
+    previewImage.onload = () => {
+      const width = previewImage.naturalWidth;
+      const height = previewImage.naturalHeight;
+      URL.revokeObjectURL(objectUrl);
+
+      // Ignore dimension checks for SVG since dimensions may be missing.
+      if (file.type !== 'image/svg+xml' &&
+          (width < this.minImageWidth || height < this.minImageHeight)) {
+        this.validationErrors['image'] = `Dimensions minimales: ${this.minImageWidth}x${this.minImageHeight}px.`;
         return;
       }
 
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        alert('L\'image doit faire moins de 5MB');
-        return;
-      }
-
-      // Convert file to base64
       const reader = new FileReader();
       reader.onload = (e: any) => {
         this.formData.image = e.target.result;
         this.imageChanged = true;
+        this.clearFieldError('image');
         console.log('Image selected and converted to base64');
       };
+      reader.onerror = () => {
+        this.validationErrors['image'] = 'Impossible de lire le fichier image.';
+      };
       reader.readAsDataURL(file);
+    };
+
+    previewImage.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      this.validationErrors['image'] = 'Le fichier importé n\'est pas une image valide.';
+    };
+
+    previewImage.src = objectUrl;
+  }
+
+  clearFieldError(field: string): void {
+    delete this.validationErrors[field];
+    if (Object.keys(this.validationErrors).length === 0) {
+      this.validationErrors = {};
     }
+  }
+
+  private validateImageValue(image: string, isCreation: boolean): string | null {
+    if (!image) {
+      return isCreation ? 'L\'image du produit est obligatoire à la création.' : null;
+    }
+
+    const isBase64Image = /^data:image\/([a-zA-Z0-9+.-]+);base64,/.test(image);
+    if (isBase64Image) {
+      if (image.length > this.maxImageBase64Length) {
+        return 'L\'image importée est trop volumineuse.';
+      }
+      return null;
+    }
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(image);
+    } catch {
+      return 'Le lien image doit être une URL valide.';
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return 'Le lien image doit commencer par http:// ou https://.';
+    }
+
+    if (image.length > this.maxImageUrlLength) {
+      return 'L\'URL de l\'image ne peut pas dépasser 500 caractères.';
+    }
+
+    const pathname = parsedUrl.pathname.toLowerCase();
+    const hasFileExtension = /\.[a-z0-9]+$/.test(pathname);
+    const hasAllowedExtension = this.allowedImageExtensions.some(ext => pathname.endsWith(ext));
+    if (hasFileExtension && !hasAllowedExtension) {
+      return 'Extension non supportée. Utilisez JPG, PNG, WEBP, GIF, AVIF ou SVG.';
+    }
+
+    return null;
   }
 
   viewProductImage(product: Product): void {

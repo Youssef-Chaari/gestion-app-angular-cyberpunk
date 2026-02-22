@@ -15,7 +15,7 @@ interface OrderDetail {
   clientName: string;
   clientEmail: string;
   totalAmount: number;
-  orderDate: string;
+  orderDate: any;
   createdAt: any;
   userId: string;
   status?: string;
@@ -677,7 +677,7 @@ export class OrdersHistoryComponent implements OnInit {
           clientName: data.name || data.clientName || 'Loading...',
           clientEmail: data.email || data.clientEmail || 'Loading...',
           totalAmount: Number(data.totalAmount || data.total_amount || 0),
-          orderDate: data.orderDate || data.created_at || new Date().toISOString(),
+          orderDate: data.orderDate || data.createdAt || data.created_at || null,
           createdAt: data.createdAt,
           userId: data.userId,
           status: data.status || 'Complétée',
@@ -691,8 +691,8 @@ export class OrdersHistoryComponent implements OnInit {
 
       // Sort orders by createdAt in descending order (most recent first)
       this.orders.sort((a, b) => {
-        const dateA = this.parseCreatedAtDate(a.createdAt);
-        const dateB = this.parseCreatedAtDate(b.createdAt);
+        const dateA = this.parseOrderDate(a.createdAt || a.orderDate);
+        const dateB = this.parseOrderDate(b.createdAt || b.orderDate);
         return dateB.getTime() - dateA.getTime();
       });
 
@@ -708,11 +708,13 @@ export class OrdersHistoryComponent implements OnInit {
       const clientMatch = !this.filters.clientName ||
         order.clientName.toLowerCase().includes(this.filters.clientName.toLowerCase());
 
-      const orderDateObj = new Date(order.orderDate);
+      const orderDateObj = this.parseOrderDate(order.orderDate || order.createdAt);
       const dateFromObj = this.filters.dateFrom ? new Date(this.filters.dateFrom) : null;
       const dateToObj = this.filters.dateTo ? new Date(this.filters.dateTo) : null;
 
-      const dateMatch = (!dateFromObj || orderDateObj >= dateFromObj) &&
+      const hasValidOrderDate = !isNaN(orderDateObj.getTime());
+      const dateMatch = hasValidOrderDate &&
+                        (!dateFromObj || orderDateObj >= dateFromObj) &&
                         (!dateToObj || orderDateObj <= dateToObj);
 
       return clientMatch && dateMatch;
@@ -720,8 +722,8 @@ export class OrdersHistoryComponent implements OnInit {
 
     // Maintain sorting order in filtered results
     this.filteredOrders.sort((a, b) => {
-      const dateA = this.parseCreatedAtDate(a.createdAt);
-      const dateB = this.parseCreatedAtDate(b.createdAt);
+      const dateA = this.parseOrderDate(a.createdAt || a.orderDate);
+      const dateB = this.parseOrderDate(b.createdAt || b.orderDate);
       return dateB.getTime() - dateA.getTime();
     });
 
@@ -742,17 +744,14 @@ export class OrdersHistoryComponent implements OnInit {
     this.totalAmount = this.filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0);
   }
 
-  formatDate(dateString: string): string {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('fr-FR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-    } catch {
-      return dateString;
-    }
+  formatDate(value: any): string {
+    const date = this.parseOrderDate(value);
+    if (isNaN(date.getTime())) return '--';
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
   }
 
   trackByOrderId(index: number, order: OrderDetail): string {
@@ -767,10 +766,34 @@ export class OrdersHistoryComponent implements OnInit {
     this.selectedOrder = null;
   }
 
-  parseCreatedAtDate(createdAt: string): Date {
-    if (!createdAt) return new Date(0);
-    
+  parseCreatedAtDate(createdAt: any): Date {
+    return this.parseOrderDate(createdAt);
+  }
+
+  private parseOrderDate(value: any): Date {
+    if (!value) return new Date(0);
+
     try {
+      // Firestore Timestamp-like object
+      if (value && typeof value === 'object') {
+        if (typeof value.toDate === 'function') {
+          const tsDate = value.toDate();
+          if (tsDate instanceof Date && !isNaN(tsDate.getTime())) return tsDate;
+        }
+        if (typeof value.seconds === 'number') {
+          const tsDate = new Date(value.seconds * 1000);
+          if (!isNaN(tsDate.getTime())) return tsDate;
+        }
+      }
+
+      if (typeof value === 'number') {
+        const tsDate = new Date(value < 1e12 ? value * 1000 : value);
+        if (!isNaN(tsDate.getTime())) return tsDate;
+      }
+
+      const createdAt = String(value).trim();
+      if (!createdAt) return new Date(0);
+
       // Handle format: "22 February 2026 at 01:25:05 UTC+1"
       const match = createdAt.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+at\s+(\d{2}):(\d{2}):(\d{2})\s+UTC([+-]\d+)/);
       if (match) {
@@ -790,14 +813,19 @@ export class OrdersHistoryComponent implements OnInit {
           return date;
         }
       }
-      
-      // Try parsing as ISO string
+
+      // Normalize YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(createdAt)) {
+        const dayDate = new Date(`${createdAt}T00:00:00`);
+        if (!isNaN(dayDate.getTime())) return dayDate;
+      }
+
+      // Try parsing as ISO/date string
       const isoDate = new Date(createdAt);
       if (!isNaN(isoDate.getTime())) {
         return isoDate;
       }
-      
-      // Fallback
+
       return new Date(0);
     } catch {
       return new Date(0);

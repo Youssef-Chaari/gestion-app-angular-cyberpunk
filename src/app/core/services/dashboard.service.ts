@@ -50,33 +50,14 @@ export class DashboardService {
                   const amount = Number(o.total_amount || o.totalAmount || 0);
                   totalRevenue += amount;
 
-                  // Get month from orderDate (YYYY-MM-DD format)
-                  let monthKey = 'Unknown';
-                  
-                  if (o.orderDate) {
-                    try {
-                      const date = new Date(o.orderDate);
-                      if (!isNaN(date.getTime())) {
-                        monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                        console.log(`Order ${idx}: parsed orderDate "${o.orderDate}" to month "${monthKey}"`);
-                      }
-                    } catch (e) {
-                      console.warn(`Order ${idx}: Error parsing orderDate:`, o.orderDate, e);
-                    }
-                  } else if (o.createdAt && o.createdAt.toDate) {
-                    // Fallback: Try Firestore Timestamp.toDate()
-                    try {
-                      const date = o.createdAt.toDate();
-                      if (!isNaN(date.getTime())) {
-                        monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                        console.log(`Order ${idx}: parsed Timestamp to month "${monthKey}"`);
-                      }
-                    } catch (e) {
-                      console.warn(`Order ${idx}: Error parsing Timestamp:`, o.createdAt, e);
-                    }
+                  const orderDate = this.extractOrderDate(o);
+                  if (orderDate) {
+                    const monthKey = orderDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                    revenueByMonthMap[monthKey] = (revenueByMonthMap[monthKey] || 0) + amount;
+                    console.log(`Order ${idx}: parsed order date to month "${monthKey}"`);
+                  } else {
+                    console.warn(`Order ${idx}: unable to parse order date`, o.orderDate, o.createdAt);
                   }
-                  
-                  revenueByMonthMap[monthKey] = (revenueByMonthMap[monthKey] || 0) + amount;
                 });
 
                 console.log('Dashboard: revenueByMonthMap =', revenueByMonthMap, 'totalRevenue =', totalRevenue);
@@ -138,5 +119,61 @@ export class DashboardService {
 
   getProductsByCategory(): Observable<any> {
     return this.getDashboardData().pipe(map(d => d.productsByCategory));
+  }
+
+  private extractOrderDate(order: any): Date | null {
+    const candidates = [order?.orderDate, order?.createdAt, order?.created_at];
+
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+
+      // Firestore Timestamp
+      if (candidate && typeof candidate === 'object') {
+        if (typeof candidate.toDate === 'function') {
+          const d = candidate.toDate();
+          if (d instanceof Date && !isNaN(d.getTime())) return d;
+        }
+        if (typeof candidate.seconds === 'number') {
+          const d = new Date(candidate.seconds * 1000);
+          if (!isNaN(d.getTime())) return d;
+        }
+      }
+
+      if (typeof candidate === 'number') {
+        const d = new Date(candidate < 1e12 ? candidate * 1000 : candidate);
+        if (!isNaN(d.getTime())) return d;
+      }
+
+      const raw = String(candidate).trim();
+      if (!raw) continue;
+
+      // Handle custom format: "22 February 2026 at 01:25:05 UTC+1"
+      const match = raw.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+at\s+(\d{2}):(\d{2}):(\d{2})\s+UTC([+-]\d+)/);
+      if (match) {
+        const [, day, month, year, hours, minutes, seconds, timezone] = match;
+        const monthNames: Record<string, number> = {
+          January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+          July: 6, August: 7, September: 8, October: 9, November: 10, December: 11
+        };
+        const monthIndex = monthNames[month];
+        if (monthIndex !== undefined) {
+          const d = new Date();
+          d.setFullYear(parseInt(year, 10), monthIndex, parseInt(day, 10));
+          d.setHours(parseInt(hours, 10), parseInt(minutes, 10), parseInt(seconds, 10), 0);
+          d.setHours(d.getHours() - parseInt(timezone, 10));
+          if (!isNaN(d.getTime())) return d;
+        }
+      }
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        const d = new Date(`${raw}T00:00:00`);
+        if (!isNaN(d.getTime())) return d;
+      }
+
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    return null;
   }
 }
