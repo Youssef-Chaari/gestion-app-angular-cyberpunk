@@ -45,7 +45,7 @@ interface OrderItem {
           <div class="card-content">
             <div class="info-row">
               <span class="info-label">Nom d'utilisateur:</span>
-              <span class="info-value">{{ currentUser?.username }}</span>
+              <span class="info-value">{{ getUserDisplayName() }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">Email:</span>
@@ -764,6 +764,16 @@ export class ProfileComponent implements OnInit {
 
   getRoleClass(role: string): string {
     return role === 'admin' ? 'admin' : 'user';
+  }
+
+  getUserDisplayName(): string {
+    if (!this.currentUser) return 'N/A';
+    
+    const firstName = (this.currentUser as any).firstName || '';
+    const lastName = (this.currentUser as any).lastName || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    
+    return fullName || this.currentUser.email || 'Utilisateur';
   }
 
   getMemberSince(): string {

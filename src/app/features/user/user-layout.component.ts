@@ -44,11 +44,8 @@ import { CartService } from '../../core/services/cart.service';
 
           <div class="user-actions">
             <div class="user-info">
-              <span class="user-greeting">Bienvenue, {{ currentUser?.username }}</span>
+              <span class="user-greeting">Bienvenue, {{ getUserDisplayName() }}</span>
             </div>
-            <button class="logout-btn" (click)="logout()" title="Se déconnecter">
-              <span class="logout-icon">🚪</span>
-            </button>
           </div>
         </div>
 
@@ -227,11 +224,6 @@ import { CartService } from '../../core/services/cart.service';
       transform: scale(1.05);
     }
 
-    .logout-icon {
-      font-size: 1rem;
-      display: block;
-    }
-
     .header-border {
       height: 2px;
       background: linear-gradient(90deg, #00ff88, #ff006e, #00ff88);
@@ -334,8 +326,13 @@ export class UserLayoutComponent {
     });
   }
 
-  logout() {
-    this.authService.logout();
-    this.router.navigate(['/auth/login']);
+  getUserDisplayName(): string {
+    if (!this.currentUser) return 'Utilisateur';
+    
+    const firstName = (this.currentUser as any).firstName || '';
+    const lastName = (this.currentUser as any).lastName || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    
+    return fullName || this.currentUser.email || 'Utilisateur';
   }
 }
