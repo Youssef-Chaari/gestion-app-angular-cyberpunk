@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../../../environments/environment';
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getFirestore, collection, getDocs, Firestore, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, Firestore, query, orderBy } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseApp = getApps().length ? getApp() : initializeApp(environment.firebase || {});
@@ -19,6 +19,11 @@ interface OrderDetail {
   createdAt: any;
   userId: string;
   status?: string;
+  items?: any[];
+  phone?: string;
+  address?: string;
+  paymentMethod?: string;
+  deliveryNotes?: string;
 }
 
 @Component({
@@ -161,6 +166,34 @@ interface OrderDetail {
             <div class="detail-group">
               <label>Statut:</label>
               <p>{{ selectedOrder.status }}</p>
+            </div>
+            <div class="detail-group" *ngIf="selectedOrder.phone">
+              <label>Téléphone:</label>
+              <p>{{ selectedOrder.phone }}</p>
+            </div>
+            <div class="detail-group" *ngIf="selectedOrder.address">
+              <label>Adresse:</label>
+              <p>{{ selectedOrder.address }}</p>
+            </div>
+            <div class="detail-group" *ngIf="selectedOrder.paymentMethod">
+              <label>Méthode de paiement:</label>
+              <p>{{ selectedOrder.paymentMethod }}</p>
+            </div>
+            <div class="detail-group" *ngIf="selectedOrder.deliveryNotes">
+              <label>Notes de livraison:</label>
+              <p>{{ selectedOrder.deliveryNotes }}</p>
+            </div>
+            <div class="detail-group">
+              <label>Articles commandés:</label>
+              <div class="order-items">
+                <div class="order-item" *ngFor="let item of selectedOrder.items">
+                  <div class="item-info">
+                    <span class="item-name">{{ item.productName }}</span>
+                    <span class="item-details">Quantité: {{ item.quantity }} × {{ item.price | number:'1.0-2' }} TND</span>
+                  </div>
+                  <div class="item-total">{{ (item.price * item.quantity) | number:'1.0-2' }} TND</div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -547,6 +580,51 @@ interface OrderDetail {
       font-size: 1.2rem;
     }
 
+    .order-items {
+      margin-top: 1rem;
+    }
+
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem;
+      background: rgba(0, 255, 136, 0.05);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+
+    .order-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-name {
+      display: block;
+      color: #00ff88;
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 0.3rem;
+    }
+
+    .item-details {
+      display: block;
+      color: rgba(0, 255, 136, 0.7);
+      font-size: 0.9rem;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .item-total {
+      color: #00ff88;
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+    }
+
     .modal-footer {
       padding: 1.5rem;
       border-top: 2px solid rgba(0, 255, 136, 0.2);
@@ -587,11 +665,8 @@ export class OrdersHistoryComponent implements OnInit {
 
   loadOrders(): void {
     const ordersCol = collection(db, 'orders');
-    const usersCol = collection(db, 'users');
 
-    const ordersQuery = query(ordersCol, orderBy('createdAt', 'desc'));
-
-    getDocs(ordersQuery).then(async (orderSnap) => {
+    getDocs(ordersCol).then(async (orderSnap) => {
       const userDocs = await getDocs(usersCol);
       const userMap = new Map();
       
@@ -601,25 +676,23 @@ export class OrdersHistoryComponent implements OnInit {
 
       this.orders = orderSnap.docs.map(doc => {
         const data = doc.data() as any;
-        const user = userMap.get(data.userId) || {};
+        console.log('Order data:', data); // Debug log
         
         return {
           id: doc.id,
-          clientName: user.displayName || user.email || 'N/A',
-          clientEmail: user.email || 'N/A',
+          clientName: data.name || data.clientName || 'Loading...',
+          clientEmail: data.email || data.clientEmail || 'Loading...',
           totalAmount: Number(data.totalAmount || data.total_amount || 0),
           orderDate: data.orderDate || data.created_at || new Date().toISOString(),
           createdAt: data.createdAt,
           userId: data.userId,
-          status: data.status || 'Complétée'
+          status: data.status || 'Complétée',
+          items: data.items || [],
+          phone: data.phone || '',
+          address: data.address || '',
+          paymentMethod: data.paymentMethod || '',
+          deliveryNotes: data.deliveryNotes || ''
         };
-      });
-
-      // Ensure descending date order client-side as a fallback
-      this.orders.sort((a, b) => {
-        const aTime = new Date(a.orderDate).getTime();
-        const bTime = new Date(b.orderDate).getTime();
-        return bTime - aTime;
       });
 
       this.filteredOrders = [...this.orders];
@@ -642,6 +715,13 @@ export class OrdersHistoryComponent implements OnInit {
                         (!dateToObj || orderDateObj <= dateToObj);
 
       return clientMatch && dateMatch;
+    });
+
+    // Maintain sorting order in filtered results
+    this.filteredOrders.sort((a, b) => {
+      const dateA = this.parseCreatedAtDate(a.createdAt);
+      const dateB = this.parseCreatedAtDate(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
     });
 
     this.calculateTotal();
@@ -684,5 +764,42 @@ export class OrdersHistoryComponent implements OnInit {
 
   closeOrderDetails(): void {
     this.selectedOrder = null;
+  }
+
+  parseCreatedAtDate(createdAt: string): Date {
+    if (!createdAt) return new Date(0);
+    
+    try {
+      // Handle format: "22 February 2026 at 01:25:05 UTC+1"
+      const match = createdAt.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+at\s+(\d{2}):(\d{2}):(\d{2})\s+UTC([+-]\d+)/);
+      if (match) {
+        const [, day, month, year, hours, minutes, seconds, timezone] = match;
+        const monthNames: { [key: string]: number } = {
+          'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+          'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+        };
+        const monthIndex = monthNames[month];
+        if (monthIndex !== undefined) {
+          const date = new Date();
+          date.setFullYear(parseInt(year), monthIndex, parseInt(day));
+          date.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
+          // Adjust for timezone offset
+          const offsetHours = parseInt(timezone);
+          date.setHours(date.getHours() - offsetHours);
+          return date;
+        }
+      }
+      
+      // Try parsing as ISO string
+      const isoDate = new Date(createdAt);
+      if (!isNaN(isoDate.getTime())) {
+        return isoDate;
+      }
+      
+      // Fallback
+      return new Date(0);
+    } catch {
+      return new Date(0);
+    }
   }
 }
