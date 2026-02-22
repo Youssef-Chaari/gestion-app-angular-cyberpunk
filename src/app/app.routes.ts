@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
 import { AdminGuard } from './core/guards/admin.guard';
-import { HomeComponent } from './features/home/home.component';
 
 export const routes: Routes = [
   {
@@ -11,22 +10,22 @@ export const routes: Routes = [
   {
     path: 'dashboard',
     canActivate: [AuthGuard, AdminGuard],
-    loadChildren: () => import('./features/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES)
+    loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES)
   },
   {
     path: 'admin/orders',
-    canActivate: [AuthGuard, AdminGuard],
-    loadComponent: () => import('./features/admin/orders/orders-history.component').then(c => c.OrdersHistoryComponent)
+    redirectTo: 'dashboard/orders',
+    pathMatch: 'full'
   },
   {
     path: 'products',
-    canActivate: [AuthGuard],
-    loadChildren: () => import('./features/products/products.routes').then(m => m.PRODUCTS_ROUTES)
+    redirectTo: 'dashboard/products',
+    pathMatch: 'full'
   },
   {
     path: 'categories',
-    canActivate: [AuthGuard],
-    loadChildren: () => import('./features/categories/categories.routes').then(m => m.CATEGORIES_ROUTES)
+    redirectTo: 'dashboard/categories',
+    pathMatch: 'full'
   },
   {
     path: 'shop',

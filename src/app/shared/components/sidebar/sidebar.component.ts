@@ -13,15 +13,15 @@ import { RouterModule } from '@angular/router';
           <span class="nav-icon">📊</span>
           <span>TABLEAU DE BORD</span>
         </button>
-        <button class="nav-item" [routerLink]="['/products']" routerLinkActive="active">
+        <button class="nav-item" [routerLink]="['/dashboard/products']" routerLinkActive="active">
           <span class="nav-icon">📦</span>
           <span>PRODUITS</span>
         </button>
-        <button class="nav-item" [routerLink]="['/categories']" routerLinkActive="active">
+        <button class="nav-item" [routerLink]="['/dashboard/categories']" routerLinkActive="active">
           <span class="nav-icon">🏷️</span>
           <span>CATÉGORIES</span>
         </button>
-        <button class="nav-item" [routerLink]="['/admin/orders']" routerLinkActive="active">
+        <button class="nav-item" [routerLink]="['/dashboard/orders']" routerLinkActive="active">
           <span class="nav-icon">📋</span>
           <span>HISTORIQUE COMMANDES</span>
         </button>

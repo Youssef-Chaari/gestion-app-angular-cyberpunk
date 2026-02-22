@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ProductService, Product } from '../../core/services/product.service';
-import { CategoryService, Category } from '../../core/services/category.service';
+import { ProductService, Product } from '../../../core/services/product.service';
+import { CategoryService, Category } from '../../../core/services/category.service';
 
 @Component({
   selector: 'app-products',

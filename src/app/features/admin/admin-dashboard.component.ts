@@ -5,7 +5,7 @@ import { DashboardService } from '../../core/services/dashboard.service';
 import Chart from 'chart.js/auto';
 
 @Component({
-  selector: 'app-dashboard',
+  selector: 'app-admin-dashboard',
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
@@ -285,7 +285,7 @@ import Chart from 'chart.js/auto';
     }
   `]
 })
-export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
+export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('revenueCanvas') revenueCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('categoryCanvas') categoryCanvas!: ElementRef<HTMLCanvasElement>;
 
