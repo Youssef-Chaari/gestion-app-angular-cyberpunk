@@ -665,6 +665,7 @@ export class OrdersHistoryComponent implements OnInit {
 
   loadOrders(): void {
     const ordersCol = collection(db, 'orders');
+    const usersCol = collection(db, 'users');
 
     getDocs(ordersCol).then(async (orderSnap) => {
       const userDocs = await getDocs(usersCol);

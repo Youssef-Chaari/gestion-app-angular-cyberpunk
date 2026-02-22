@@ -52,7 +52,9 @@ export class FirebaseAuthService {
                     firstName: fsUser.firstName || '',
                     lastName: fsUser.lastName || '',
                     email: fsUser.email,
-                    role: fsUser.role || 'user'
+                    role: fsUser.role || 'user',
+                    created_at: fsUser.created_at || null,
+                    createdAt: fsUser.createdAt || null
                   }
                 };
               }

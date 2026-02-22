@@ -2,6 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService, User } from '../../core/services/auth.service';
 import { FirestoreOrderService } from '../../core/services/firestore-order.service';
+import { environment } from '../../../environments/environment';
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { Firestore, doc, getDoc, getFirestore } from 'firebase/firestore';
 
 interface Order {
   id: string;
@@ -59,7 +62,7 @@ interface OrderItem {
             </div>
             <div class="info-row">
               <span class="info-label">Membre depuis:</span>
-              <span class="info-value">{{ getMemberSince() }}</span>
+              <span class="info-value">{{ memberSince }}</span>
             </div>
           </div>
         </div>
@@ -689,14 +692,22 @@ interface OrderItem {
 export class ProfileComponent implements OnInit {
   orders: Order[] = [];
   currentUser: User | null = null;
+  memberSince = 'Inconnu';
+  private db: Firestore;
 
   constructor(private authService: AuthService, private ordersService: FirestoreOrderService) {
+    const firebaseApp = getApps().length ? getApp() : initializeApp(environment.firebase);
+    this.db = getFirestore(firebaseApp);
+
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
+      this.memberSince = this.getMemberSince();
       console.log('Profile - Current user:', user);
       console.log('Profile - uid:', (user as any)?.uid);
       console.log('Profile - id:', user?.id);
       if (user) {
+        this.loadMemberSinceFromFirestore(user);
+
         // Use Firebase UID if available, otherwise use id
         const userId = (user as any).uid || user.id;
         if (userId) {
@@ -767,20 +778,17 @@ export class ProfileComponent implements OnInit {
   }
 
   getMemberSince(): string {
-    if (!this.currentUser) {
-      return 'Inconnu';
-    }
+    if (!this.currentUser) return 'Inconnu';
 
     const u: any = this.currentUser as any;
-    // possible field names where creation date may be stored
     const candidates = [
       u.createdAt,
       u.created_at,
       u.dateCreated,
       u.registeredAt,
       u.joinedAt,
-      u.metadata && u.metadata.creationTime,
-      u.metadata && u.metadata.createdAt,
+      (u.metadata && u.metadata.creationTime) || null,
+      (u.metadata && u.metadata.createdAt) || null,
       u.creationTime
     ];
 
@@ -792,32 +800,90 @@ export class ProfileComponent implements OnInit {
       }
     }
 
-    if (!dateVal) {
-      return 'Inconnu';
+    if (!dateVal) return 'Inconnu';
+
+    // ISO from DB: "2026-02-22T01:09:18.518Z" -> "2026-02-22"
+    if (typeof dateVal === 'string') {
+      const isoDatePrefix = String(dateVal).match(/^(\d{4}-\d{2}-\d{2})/);
+      if (isoDatePrefix && isoDatePrefix[1]) return isoDatePrefix[1];
     }
 
-    // Firestore Timestamp object
     try {
+      // Firestore Timestamp
       if (dateVal && typeof dateVal === 'object' && typeof dateVal.toDate === 'function') {
         const d = dateVal.toDate();
-        return d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        return d.toISOString().slice(0, 10);
       }
 
-      // If it's a numeric timestamp (seconds or ms)
+      // numeric timestamp (seconds or ms)
       if (typeof dateVal === 'number') {
-        // if in seconds, convert to ms
         const ts = dateVal < 1e12 ? dateVal * 1000 : dateVal;
         const d = new Date(ts);
-        return d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
       }
 
-      // If it's an ISO string or other date string
-      const parsed = new Date(dateVal);
+      // try parsing ISO or other string formats
+      const parsed = new Date(String(dateVal));
       if (!isNaN(parsed.getTime())) {
-        return parsed.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        return parsed.toISOString().slice(0, 10);
       }
     } catch (e) {
       console.warn('getMemberSince: failed to parse date', dateVal, e);
+    }
+
+    return 'Inconnu';
+  }
+
+  private async loadMemberSinceFromFirestore(user: User): Promise<void> {
+    if (this.memberSince !== 'Inconnu') return;
+
+    const uid = (user as any)?.uid || user?.id;
+    if (!uid) return;
+
+    try {
+      const userRef = doc(this.db, 'users', String(uid));
+      const snapshot = await getDoc(userRef);
+      if (!snapshot.exists()) return;
+
+      const data: any = snapshot.data();
+      const dateVal = data?.created_at ?? data?.createdAt ?? null;
+      if (!dateVal) return;
+
+      const formatted = this.formatMemberSinceValue(dateVal);
+      if (formatted !== 'Inconnu') {
+        this.memberSince = formatted;
+      }
+    } catch (error) {
+      console.warn('Profile - Unable to load member date from Firestore', error);
+    }
+  }
+
+  private formatMemberSinceValue(dateVal: any): string {
+    if (!dateVal) return 'Inconnu';
+
+    if (typeof dateVal === 'string') {
+      const isoDatePrefix = String(dateVal).match(/^(\d{4}-\d{2}-\d{2})/);
+      if (isoDatePrefix && isoDatePrefix[1]) return isoDatePrefix[1];
+    }
+
+    try {
+      if (dateVal && typeof dateVal === 'object' && typeof dateVal.toDate === 'function') {
+        const d = dateVal.toDate();
+        return d.toISOString().slice(0, 10);
+      }
+
+      if (typeof dateVal === 'number') {
+        const ts = dateVal < 1e12 ? dateVal * 1000 : dateVal;
+        const d = new Date(ts);
+        if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+      }
+
+      const parsed = new Date(String(dateVal));
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().slice(0, 10);
+      }
+    } catch (error) {
+      console.warn('formatMemberSinceValue: failed to parse date', dateVal, error);
     }
 
     return 'Inconnu';
