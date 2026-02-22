@@ -587,30 +587,28 @@ export class OrdersHistoryComponent implements OnInit {
 
   loadOrders(): void {
     const ordersCol = collection(db, 'orders');
-    const usersCol = collection(db, 'users');
 
-    getDocs(ordersCol).then(async (orderSnap) => {
-      const userDocs = await getDocs(usersCol);
-      const userMap = new Map();
-      
-      userDocs.docs.forEach(doc => {
-        userMap.set(doc.id, doc.data());
-      });
-
+    getDocs(ordersCol).then((orderSnap) => {
       this.orders = orderSnap.docs.map(doc => {
         const data = doc.data() as any;
-        const user = userMap.get(data.userId) || {};
         
         return {
           id: doc.id,
-          clientName: user.displayName || user.email || 'N/A',
-          clientEmail: user.email || 'N/A',
+          clientName: data.name || data.clientName || 'N/A',
+          clientEmail: data.email || data.clientEmail || 'N/A',
           totalAmount: Number(data.totalAmount || data.total_amount || 0),
           orderDate: data.orderDate || data.created_at || new Date().toISOString(),
           createdAt: data.createdAt,
           userId: data.userId,
           status: data.status || 'Complétée'
         };
+      });
+
+      // Sort orders by createdAt in descending order (most recent first)
+      this.orders.sort((a, b) => {
+        const dateA = this.parseCreatedAtDate(a.createdAt);
+        const dateB = this.parseCreatedAtDate(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
       });
 
       this.filteredOrders = [...this.orders];
@@ -633,6 +631,13 @@ export class OrdersHistoryComponent implements OnInit {
                         (!dateToObj || orderDateObj <= dateToObj);
 
       return clientMatch && dateMatch;
+    });
+
+    // Maintain sorting order in filtered results
+    this.filteredOrders.sort((a, b) => {
+      const dateA = this.parseCreatedAtDate(a.createdAt);
+      const dateB = this.parseCreatedAtDate(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
     });
 
     this.calculateTotal();
@@ -675,5 +680,42 @@ export class OrdersHistoryComponent implements OnInit {
 
   closeOrderDetails(): void {
     this.selectedOrder = null;
+  }
+
+  parseCreatedAtDate(createdAt: string): Date {
+    if (!createdAt) return new Date(0);
+    
+    try {
+      // Handle format: "22 February 2026 at 01:25:05 UTC+1"
+      const match = createdAt.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+at\s+(\d{2}):(\d{2}):(\d{2})\s+UTC([+-]\d+)/);
+      if (match) {
+        const [, day, month, year, hours, minutes, seconds, timezone] = match;
+        const monthNames: { [key: string]: number } = {
+          'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+          'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+        };
+        const monthIndex = monthNames[month];
+        if (monthIndex !== undefined) {
+          const date = new Date();
+          date.setFullYear(parseInt(year), monthIndex, parseInt(day));
+          date.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
+          // Adjust for timezone offset
+          const offsetHours = parseInt(timezone);
+          date.setHours(date.getHours() - offsetHours);
+          return date;
+        }
+      }
+      
+      // Try parsing as ISO string
+      const isoDate = new Date(createdAt);
+      if (!isNaN(isoDate.getTime())) {
+        return isoDate;
+      }
+      
+      // Fallback
+      return new Date(0);
+    } catch {
+      return new Date(0);
+    }
   }
 }

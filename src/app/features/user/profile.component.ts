@@ -719,12 +719,25 @@ export class ProfileComponent implements OnInit {
 
   private loadOrdersForUser(userId: string) {
     console.log('➤ Starting to load orders for userId:', userId);
-    this.ordersService.getOrdersByUser(userId).subscribe({
-      next: (list) => {
-        console.log('✓ Loaded orders from Firestore:', list);
-        console.log('✓ Number of orders:', list.length);
+    
+    // First, load ALL orders to see what exists in Firestore
+    this.ordersService.getAllOrders().subscribe({
+      next: (allOrders) => {
+        console.log('📊 ALL ORDERS IN FIRESTORE:', allOrders);
+        console.log('📊 User ID we are looking for:', userId);
+        
+        // Filter orders for this user
+        const userOrders = allOrders.filter(o => {
+          const match = o.userId === userId;
+          console.log(`Checking order ${o.id}: userId="${o.userId}" vs "${userId}" = ${match}`);
+          return match;
+        });
+        
+        console.log('✓ Filtered orders for this user:', userOrders);
+        console.log('✓ Number of orders found:', userOrders.length);
+        
         // Normalize created_at to string for existing UI helpers
-        this.orders = list.map(o => {
+        this.orders = userOrders.map(o => {
           console.log('Processing order:', o);
           return {
             id: o.id,
