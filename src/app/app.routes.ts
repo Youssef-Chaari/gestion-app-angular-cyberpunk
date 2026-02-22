@@ -16,7 +16,7 @@ export const routes: Routes = [
   {
     path: 'admin/orders',
     canActivate: [AuthGuard, AdminGuard],
-    loadComponent: () => import('./features/admin/admin-orders.component').then(c => c.AdminOrdersComponent)
+    loadComponent: () => import('./features/admin/orders/orders-history.component').then(c => c.OrdersHistoryComponent)
   },
   {
     path: 'products',
