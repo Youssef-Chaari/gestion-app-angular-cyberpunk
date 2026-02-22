@@ -16,41 +16,51 @@ import Chart from 'chart.js/auto';
         </div>
       </div>
 
-      <div class="kpi-section">
-        <div class="kpi-card">
-          <div class="kpi-icon">📦</div>
-            <div class="kpi-content">
-            <h3>TOTAL PRODUITS</h3>
-            <p class="kpi-value">{{ totalProducts }}</p>
-            </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon">📋</div>
-          <div class="kpi-content">
-            <h3>TOTAL COMMANDES</h3>
-            <p class="kpi-value">{{ totalOrders }}</p>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon">💰</div>
-          <div class="kpi-content">
-            <h3>REVENUS TOTAUX</h3>
-            <p class="kpi-value">TND{{ totalRevenue | number:'1.2-2' }}</p>
-          </div>
-        </div>
+      <div *ngIf="isLoading" class="loading-message">
+        <p>⏳ Chargement du tableau de bord...</p>
       </div>
 
-      <div class="charts-section">
-        <div class="chart-card">
-          <h3>📈 REVENUS PAR MOIS</h3>
-          <canvas #revenueCanvas></canvas>
+      <div *ngIf="dashboardError" class="error-message">
+        <p>❌ {{ dashboardError }}</p>
+      </div>
+
+      <div *ngIf="!isLoading && !dashboardError" class="dashboard-content">
+        <div class="kpi-section">
+          <div class="kpi-card">
+            <div class="kpi-icon">📦</div>
+              <div class="kpi-content">
+              <h3>TOTAL PRODUITS</h3>
+              <p class="kpi-value">{{ totalProducts }}</p>
+              </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-content">
+              <h3>TOTAL COMMANDES</h3>
+              <p class="kpi-value">{{ totalOrders }}</p>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-content">
+              <h3>REVENUS TOTAUX</h3>
+              <p class="kpi-value">TND{{ totalRevenue | number:'1.2-2' }}</p>
+            </div>
+          </div>
         </div>
 
-        <div class="chart-card">
-          <h3>🥧 PRODUITS PAR CATÉGORIE</h3>
-          <canvas #categoryCanvas></canvas>
+        <div class="charts-section">
+          <div class="chart-card">
+            <h3>📈 REVENUS PAR MOIS</h3>
+            <canvas #revenueCanvas></canvas>
+          </div>
+
+          <div class="chart-card">
+            <h3>🥧 PRODUITS PAR CATÉGORIE</h3>
+            <canvas #categoryCanvas></canvas>
+          </div>
         </div>
       </div>
     </div>
@@ -58,6 +68,26 @@ import Chart from 'chart.js/auto';
   styles: [`
     .dashboard {
       animation: fadeIn 0.5s ease-in;
+    }
+
+    .loading-message, .error-message {
+      text-align: center;
+      padding: 3rem 2rem;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      margin: 2rem 0;
+    }
+
+    .loading-message {
+      background: rgba(0, 212, 255, 0.1);
+      border: 2px solid #00d4ff;
+      color: #00d4ff;
+    }
+
+    .error-message {
+      background: rgba(255, 0, 110, 0.1);
+      border: 2px solid #ff006e;
+      color: #ff006e;
     }
 
     .dashboard-header {
@@ -91,6 +121,9 @@ import Chart from 'chart.js/auto';
       }
     }
 
+    .dashboard-content {
+      animation: slideIn 0.5s ease-in;
+    }
 
     .kpi-section {
       display: grid;
@@ -224,6 +257,17 @@ import Chart from 'chart.js/auto';
       }
     }
 
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
     @media (max-width: 1024px) {
       .charts-section {
         grid-template-columns: 1fr;
@@ -250,6 +294,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   totalRevenue = 0;
   revenueByMonth: any[] = [];
   productsByCategory: any[] = [];
+  dashboardError = '';
+  isLoading = true;
 
   private revenueChart: Chart | null = null;
   private categoryChart: Chart | null = null;
@@ -257,9 +303,14 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(private dashboardService: DashboardService) {}
 
   ngOnInit(): void {
-    // Charger les données du dashboard
+    // Load dashboard data
+    this.isLoading = true;
+    this.dashboardError = '';
+    console.log('Dashboard: Loading data...');
     this.dashboardService.getDashboardData().subscribe({
       next: (data) => {
+        this.isLoading = false;
+        console.log('Dashboard: Data loaded successfully', data);
         const payload: any = data || {};
         // support different shapes
         this.totalProducts = payload.total_products ?? payload.totalProducts ?? 0;
@@ -275,10 +326,27 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         }
         this.productsByCategory = payload.products_by_category || payload.productsByCategory || [];
         console.log('Dashboard data loaded:', { totalProducts: this.totalProducts, totalOrders: this.totalOrders, totalRevenue: this.totalRevenue, revenueByMonth: this.revenueByMonth, productsByCategory: this.productsByCategory });
-        this.updateCharts();
+        
+        // Schedule chart update after template renders
+        setTimeout(() => {
+          this.updateCharts();
+        }, 100);
       },
       error: (err) => {
-        console.error('Error loading dashboard:', err);
+        this.isLoading = false;
+        console.error('Dashboard Error:', err);
+        console.error('Error Code:', err?.code);
+        console.error('Error Message:', err?.message);
+        
+        // Build user-friendly error message
+        let errorMsg = 'Erreur lors du chargement des données du tableau de bord.';
+        if (err?.code === 'permission-denied') {
+          errorMsg += ' Vous devez être authentifié et avoir les permissions nécessaires.';
+        } else if (err?.message) {
+          errorMsg += ` ${err.message}`;
+        }
+        
+        this.dashboardError = errorMsg;
       }
     });
   }
@@ -293,6 +361,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private updateCharts(): void {
+    console.log('updateCharts called', { revenueCanvas: !!this.revenueCanvas, categoryCanvas: !!this.categoryCanvas });
+    
     // Helper to parse "Dec 2025" format back to Date for proper sorting
     const parseMonthLabel = (label: string): Date => {
       try {
@@ -311,6 +381,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     const revenueData = sortedRevenue.map(r => Number(r.revenue) || 0);
 
     if (this.revenueCanvas && this.revenueCanvas.nativeElement) {
+      console.log('Creating revenue chart with data:', { labels: revenueLabels, data: revenueData });
       if (this.revenueChart) {
         this.revenueChart.data.labels = revenueLabels as any;
         this.revenueChart.data.datasets = [{ label: 'Revenu', data: revenueData, borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.1)' }];
@@ -340,12 +411,15 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           }
         });
       }
+    } else {
+      console.warn('Revenue canvas not found', this.revenueCanvas);
     }
 
     const catLabels = this.productsByCategory.map((c: any) => c.name);
     const catData = this.productsByCategory.map((c: any) => Number(c.count) || 0);
 
     if (this.categoryCanvas && this.categoryCanvas.nativeElement) {
+      console.log('Creating category chart with data:', { labels: catLabels, data: catData });
       if (this.categoryChart) {
         this.categoryChart.data.labels = catLabels as any;
         this.categoryChart.data.datasets = [{ data: catData, backgroundColor: ['#00ff88', '#ff006e', '#00ccff', '#ffaa00'] }];
@@ -357,6 +431,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           options: { responsive: true }
         });
       }
+    } else {
+      console.warn('Category canvas not found', this.categoryCanvas);
     }
   }
 
