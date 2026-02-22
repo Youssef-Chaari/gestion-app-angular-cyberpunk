@@ -1236,13 +1236,6 @@ export class ProfileComponent implements OnInit {
     });
   }
 
-  viewOrderDetails(order: Order): void {
-    this.selectedOrder = order;
-  }
-
-  closeOrderDetails(): void {
-    this.selectedOrder = null;
-  }
 
 
   trackByOrderId(index: number, order: Order): string {
