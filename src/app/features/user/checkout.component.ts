@@ -352,9 +352,9 @@ export class CheckoutComponent {
             this.isSubmitting = false;
             this.cart.clear();
             if (res.stockUpdateFailed) {
-              this.popupService.showWarning('Commande creee mais la mise a jour du stock a echoue. Veuillez verifier les stocks.', 'Attention');
+              this.popupService.showWarning('Votre commande a bien ete enregistree. Notre equipe finalise le traitement.', 'Attention');
             } else {
-              this.popupService.showSuccess('Commande creee avec succes. Stock mis a jour.', 'Succes');
+              this.popupService.showSuccess('Votre commande a ete confirmee avec succes.', 'Succes');
             }
             this.router.navigate(['/shop/profile']);
           },
