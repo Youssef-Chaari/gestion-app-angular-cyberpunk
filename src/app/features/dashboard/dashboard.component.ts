@@ -146,11 +146,14 @@ import Chart from 'chart.js/auto';
 
     .kpi-value {
       margin: 0.5rem 0 0 0;
-      font-size: 2.5rem;
+      font-size: 2rem;
       font-weight: 900;
       color: #00ff88;
       font-family: 'Orbitron', sans-serif;
       text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+      word-break: break-word;
+      max-width: 100%;
+      overflow-wrap: break-word;
     }
 
     .charts-section {
@@ -271,6 +274,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           this.totalRevenue = this.revenueByMonth.reduce((s: number, r: any) => s + (Number(r.revenue) || 0), 0);
         }
         this.productsByCategory = payload.products_by_category || payload.productsByCategory || [];
+        console.log('Dashboard data loaded:', { totalProducts: this.totalProducts, totalOrders: this.totalOrders, totalRevenue: this.totalRevenue, revenueByMonth: this.revenueByMonth, productsByCategory: this.productsByCategory });
         this.updateCharts();
       },
       error: (err) => {
@@ -289,12 +293,19 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private updateCharts(): void {
+    // Helper to parse "Dec 2025" format back to Date for proper sorting
+    const parseMonthLabel = (label: string): Date => {
+      try {
+        return new Date(label);
+      } catch {
+        return new Date(0);
+      }
+    };
+
     const sortedRevenue = [...this.revenueByMonth].sort((a: any, b: any) => {
-      const ma = String(a.month || '');
-      const mb = String(b.month || '');
-      if (ma < mb) return -1;
-      if (ma > mb) return 1;
-      return 0;
+      const dateA = parseMonthLabel(a.month || '');
+      const dateB = parseMonthLabel(b.month || '');
+      return dateA.getTime() - dateB.getTime();
     });
     const revenueLabels = sortedRevenue.map(r => r.month);
     const revenueData = sortedRevenue.map(r => Number(r.revenue) || 0);
@@ -307,8 +318,26 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       } else if (revenueLabels.length) {
         this.revenueChart = new Chart(this.revenueCanvas.nativeElement.getContext('2d') as CanvasRenderingContext2D, {
           type: 'line',
-          data: { labels: revenueLabels, datasets: [{ label: 'Revenu', data: revenueData, borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.1)', fill: true }] },
-          options: { responsive: true, plugins: { legend: { display: false } } }
+          data: { labels: revenueLabels, datasets: [{ label: 'Revenu (TND)', data: revenueData, borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.1)', fill: true, tension: 0.4 }] },
+          options: { 
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { 
+              legend: { display: true, labels: { color: '#00ff88' } } 
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,255,136,0.1)' },
+                ticks: { color: '#00ff88' },
+                title: { display: true, text: 'Revenu (TND)', color: '#00ff88' }
+              },
+              x: {
+                grid: { color: 'rgba(0,255,136,0.1)' },
+                ticks: { color: '#00ff88' }
+              }
+            }
+          }
         });
       }
     }

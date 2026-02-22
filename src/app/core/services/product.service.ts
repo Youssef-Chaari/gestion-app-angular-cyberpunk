@@ -96,4 +96,16 @@ export class ProductService {
     const ref = doc(db, 'products', String(id));
     return from(deleteDoc(ref));
   }
+
+  getCategories(): Observable<any[]> {
+    const categoriesCol = collection(db, 'categories');
+    return from(getDocs(categoriesCol)).pipe(
+      map(snapshot => snapshot.docs.map(d => {
+        const data = d.data() as any;
+        // Exclude id from data since we use the document ID
+        const { id, ...categoryData } = data;
+        return { id: d.id, ...categoryData };
+      }))
+    );
+  }
 }
