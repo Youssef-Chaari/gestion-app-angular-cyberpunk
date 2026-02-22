@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../../../environments/environment';
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getFirestore, collection, getDocs, Firestore } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, Firestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseApp = getApps().length ? getApp() : initializeApp(environment.firebase || {});
@@ -19,6 +19,11 @@ interface OrderDetail {
   createdAt: any;
   userId: string;
   status?: string;
+  items?: any[];
+  phone?: string;
+  address?: string;
+  paymentMethod?: string;
+  deliveryNotes?: string;
 }
 
 @Component({
@@ -161,6 +166,34 @@ interface OrderDetail {
             <div class="detail-group">
               <label>Statut:</label>
               <p>{{ selectedOrder.status }}</p>
+            </div>
+            <div class="detail-group" *ngIf="selectedOrder.phone">
+              <label>Téléphone:</label>
+              <p>{{ selectedOrder.phone }}</p>
+            </div>
+            <div class="detail-group" *ngIf="selectedOrder.address">
+              <label>Adresse:</label>
+              <p>{{ selectedOrder.address }}</p>
+            </div>
+            <div class="detail-group" *ngIf="selectedOrder.paymentMethod">
+              <label>Méthode de paiement:</label>
+              <p>{{ selectedOrder.paymentMethod }}</p>
+            </div>
+            <div class="detail-group" *ngIf="selectedOrder.deliveryNotes">
+              <label>Notes de livraison:</label>
+              <p>{{ selectedOrder.deliveryNotes }}</p>
+            </div>
+            <div class="detail-group">
+              <label>Articles commandés:</label>
+              <div class="order-items">
+                <div class="order-item" *ngFor="let item of selectedOrder.items">
+                  <div class="item-info">
+                    <span class="item-name">{{ item.productName }}</span>
+                    <span class="item-details">Quantité: {{ item.quantity }} × {{ item.price | number:'1.0-2' }} TND</span>
+                  </div>
+                  <div class="item-total">{{ (item.price * item.quantity) | number:'1.0-2' }} TND</div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -547,6 +580,51 @@ interface OrderDetail {
       font-size: 1.2rem;
     }
 
+    .order-items {
+      margin-top: 1rem;
+    }
+
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem;
+      background: rgba(0, 255, 136, 0.05);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+
+    .order-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-name {
+      display: block;
+      color: #00ff88;
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 0.3rem;
+    }
+
+    .item-details {
+      display: block;
+      color: rgba(0, 255, 136, 0.7);
+      font-size: 0.9rem;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .item-total {
+      color: #00ff88;
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+    }
+
     .modal-footer {
       padding: 1.5rem;
       border-top: 2px solid rgba(0, 255, 136, 0.2);
@@ -588,21 +666,60 @@ export class OrdersHistoryComponent implements OnInit {
   loadOrders(): void {
     const ordersCol = collection(db, 'orders');
 
-    getDocs(ordersCol).then((orderSnap) => {
-      this.orders = orderSnap.docs.map(doc => {
+    getDocs(ordersCol).then(async (orderSnap) => {
+      const orders = orderSnap.docs.map(doc => {
         const data = doc.data() as any;
+        console.log('Order data:', data); // Debug log
         
         return {
           id: doc.id,
-          clientName: data.name || data.clientName || 'N/A',
-          clientEmail: data.email || data.clientEmail || 'N/A',
+          clientName: data.name || data.clientName || 'Loading...',
+          clientEmail: data.email || data.clientEmail || 'Loading...',
           totalAmount: Number(data.totalAmount || data.total_amount || 0),
           orderDate: data.orderDate || data.created_at || new Date().toISOString(),
           createdAt: data.createdAt,
           userId: data.userId,
-          status: data.status || 'Complétée'
+          status: data.status || 'Complétée',
+          items: data.items || [],
+          phone: data.phone || '',
+          address: data.address || '',
+          paymentMethod: data.paymentMethod || '',
+          deliveryNotes: data.deliveryNotes || ''
         };
       });
+
+      // Fetch user details for each order that doesn't have client info
+      const userPromises = orders.map(async (order) => {
+        if ((order.clientName === 'Loading...' || order.clientEmail === 'Loading...') && order.userId) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', order.userId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              if (order.clientName === 'Loading...') {
+                order.clientName = `${userData['firstName'] || ''} ${userData['lastName'] || ''}`.trim() || 'N/A';
+              }
+              if (order.clientEmail === 'Loading...') {
+                order.clientEmail = userData['email'] || 'N/A';
+              }
+            } else {
+              if (order.clientName === 'Loading...') order.clientName = 'N/A';
+              if (order.clientEmail === 'Loading...') order.clientEmail = 'N/A';
+            }
+          } catch (error) {
+            console.error('Error fetching user data for order:', order.id, error);
+            if (order.clientName === 'Loading...') order.clientName = 'N/A';
+            if (order.clientEmail === 'Loading...') order.clientEmail = 'N/A';
+          }
+        } else {
+          // If no userId and still loading, set to N/A
+          if (order.clientName === 'Loading...') order.clientName = 'N/A';
+          if (order.clientEmail === 'Loading...') order.clientEmail = 'N/A';
+        }
+        return order;
+      });
+
+      // Wait for all user data to be fetched
+      this.orders = await Promise.all(userPromises);
 
       // Sort orders by createdAt in descending order (most recent first)
       this.orders.sort((a, b) => {
