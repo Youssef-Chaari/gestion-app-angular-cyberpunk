@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ProductService, Product } from '../../core/services/product.service';
 import { CartService } from '../../core/services/cart.service';
+import { PopupService } from '../../shared/components/popup/popup.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -24,7 +25,7 @@ import { CartService } from '../../core/services/cart.service';
 export class ProductDetailComponent implements OnInit {
   product: Product | null = null;
 
-  constructor(private route: ActivatedRoute, private productService: ProductService, private cart: CartService) {}
+  constructor(private route: ActivatedRoute, private productService: ProductService, private cart: CartService, private popupService: PopupService) {}
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -44,7 +45,7 @@ export class ProductDetailComponent implements OnInit {
   addToCart() {
     if (this.product) {
       this.cart.add(this.product, 1);
-      alert('Produit ajouté au panier');
+      this.popupService.showSuccess('Produit ajouté au panier');
     }
   }
 }

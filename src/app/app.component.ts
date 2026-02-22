@@ -5,11 +5,13 @@ import { map } from 'rxjs/operators';
 import { AuthService } from './core/services/auth.service';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
 import { SidebarComponent } from './shared/components/sidebar/sidebar.component';
+import { PopupComponent } from './shared/components/popup/popup.component';
+import { PopupService } from './shared/components/popup/popup.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterModule, NavbarComponent, SidebarComponent],
+  imports: [CommonModule, RouterModule, NavbarComponent, SidebarComponent, PopupComponent],
   template: `
     <div class="app-container">
       <app-navbar *ngIf="isAuthenticated$ | async"></app-navbar>
@@ -21,6 +23,16 @@ import { SidebarComponent } from './shared/components/sidebar/sidebar.component'
       </div>
       <router-outlet *ngIf="!(isAuthenticated$ | async) || !(isAdmin$ | async)"></router-outlet>
     </div>
+
+    <!-- Global Popup -->
+    <app-popup
+      [isVisible]="popupData.isVisible"
+      [title]="popupData.title"
+      [message]="popupData.message"
+      [icon]="popupData.icon"
+      [buttonText]="popupData.buttonText"
+      (closed)="popupService.hidePopup()">
+    </app-popup>
   `,
   styles: [`
     .app-container {
@@ -59,10 +71,14 @@ export class AppComponent implements OnInit {
   isAdmin$ = this.authService.currentUser$.pipe(
     map(user => user?.role === 'admin')
   );
+  popupData: any = { isVisible: false, title: '', message: '', icon: 'ℹ️', buttonText: 'OK' };
 
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, public popupService: PopupService) {}
 
   ngOnInit() {
     this.authService.checkAuth();
+    this.popupService.popup$.subscribe(data => {
+      this.popupData = data;
+    });
   }
 }

@@ -11,11 +11,11 @@ interface Order {
 }
 
 interface OrderItem {
-  product: {
-    name: string;
-    price: number;
-  };
+  productId: string;
+  productName: string;
+  price: number;
   quantity: number;
+  currentStock?: number;
 }
 
 @Component({
@@ -101,11 +101,11 @@ interface OrderItem {
               <div class="order-items">
                 <div class="order-item" *ngFor="let item of order.items">
                   <div class="item-details">
-                    <span class="item-name">{{ item.product.name }}</span>
+                    <span class="item-name">{{ item.productName }}</span>
                     <span class="item-quantity">×{{ item.quantity }}</span>
                   </div>
                   <div class="item-price">
-                    <span class="price-value">{{ (item.product.price * item.quantity) | number:'1.2-2' }}</span>
+                    <span class="price-value">{{ (item.price * item.quantity) | number:'1.2-2' }}</span>
                     <span class="price-currency">TND</span>
                   </div>
                 </div>
@@ -711,7 +711,7 @@ export class ProfileComponent implements OnInit {
       this.orders = list.map(o => ({
         id: o.id,
         created_at: o.orderDate || o.created_at || o.createdAt || new Date().toISOString(),
-        total: o.total || 0,
+        total: o.totalAmount || o.total || (o.items ? o.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0) : 0),
         items: o.items || []
       }));
     }, () => {
