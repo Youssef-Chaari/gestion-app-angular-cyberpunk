@@ -15,6 +15,8 @@ export interface User {
   lastName?: string;
   email: string;
   role: string;
+  created_at?: string;
+  createdAt?: string;
 }
 
 export interface AuthResponse {
