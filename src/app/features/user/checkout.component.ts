@@ -19,11 +19,11 @@ import { forkJoin } from 'rxjs';
       <form (ngSubmit)="placeOrder()">
         <div class="form-group">
           <label>Nom complet</label>
-          <input [(ngModel)]="name" name="name" required placeholder="Votre nom complet">
+          <input [(ngModel)]="name" name="name" required placeholder="Nom et prénom">
         </div>
         <div class="form-group">
           <label>Email</label>
-          <input [(ngModel)]="email" name="email" type="email" required placeholder="votre.email@example.com">
+          <input [(ngModel)]="email" name="email" type="email" required placeholder="Email">
         </div>
         <div class="form-group">
           <label>Téléphone</label>

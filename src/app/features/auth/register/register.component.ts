@@ -34,38 +34,38 @@ import { takeUntil } from 'rxjs/operators';
         <form (ngSubmit)="register()" *ngIf="!emailVerificationSent">
           <div class="form-group">
             <label for="firstName">PRÉNOM</label>
-            <input
-              type="text"
-              id="firstName"
-              [(ngModel)]="firstName"
-              name="firstName"
-              placeholder="Jean"
-              required
-            >
+              <input
+                type="text"
+                id="firstName"
+                [(ngModel)]="firstName"
+                name="firstName"
+                placeholder="Prénom"
+                required
+              >
           </div>
 
           <div class="form-group">
             <label for="lastName">NOM</label>
-            <input
-              type="text"
-              id="lastName"
-              [(ngModel)]="lastName"
-              name="lastName"
-              placeholder="Dupont"
-              required
-            >
+              <input
+                type="text"
+                id="lastName"
+                [(ngModel)]="lastName"
+                name="lastName"
+                placeholder="Nom"
+                required
+              >
           </div>
 
           <div class="form-group">
             <label for="email">EMAIL</label>
-            <input
-              type="email"
-              id="email"
-              [(ngModel)]="email"
-              name="email"
-              placeholder="votre.email@example.com"
-              required
-            >
+              <input
+                type="email"
+                id="email"
+                [(ngModel)]="email"
+                name="email"
+                placeholder="Email"
+                required
+              >
           </div>
 
           <div class="form-group">

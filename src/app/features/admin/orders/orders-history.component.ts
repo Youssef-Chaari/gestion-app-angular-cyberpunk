@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../../../environments/environment';
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getFirestore, collection, getDocs, Firestore } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, Firestore, query, orderBy } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseApp = getApps().length ? getApp() : initializeApp(environment.firebase || {});
@@ -589,7 +589,9 @@ export class OrdersHistoryComponent implements OnInit {
     const ordersCol = collection(db, 'orders');
     const usersCol = collection(db, 'users');
 
-    getDocs(ordersCol).then(async (orderSnap) => {
+    const ordersQuery = query(ordersCol, orderBy('createdAt', 'desc'));
+
+    getDocs(ordersQuery).then(async (orderSnap) => {
       const userDocs = await getDocs(usersCol);
       const userMap = new Map();
       
@@ -611,6 +613,13 @@ export class OrdersHistoryComponent implements OnInit {
           userId: data.userId,
           status: data.status || 'Complétée'
         };
+      });
+
+      // Ensure descending date order client-side as a fallback
+      this.orders.sort((a, b) => {
+        const aTime = new Date(a.orderDate).getTime();
+        const bTime = new Date(b.orderDate).getTime();
+        return bTime - aTime;
       });
 
       this.filteredOrders = [...this.orders];

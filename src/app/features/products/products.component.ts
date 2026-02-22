@@ -152,7 +152,7 @@ import { CategoryService, Category } from '../../core/services/category.service'
                        class="form-input"
                        [(ngModel)]="formData.name"
                        name="name"
-                       placeholder="Entrez le nom du produit"
+                       placeholder="Nom du produit"
                        required>
               </div>
 

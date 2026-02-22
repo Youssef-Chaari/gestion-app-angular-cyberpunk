@@ -1,14 +1,16 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <nav class="navbar">
+    <nav *ngIf="showNavbar" class="navbar">
       <div class="navbar-left">
         <span class="navbar-icon">⚡</span>
         <div class="navbar-title">GESTION APP</div>
@@ -120,13 +122,44 @@ import { AuthService } from '../../../core/services/auth.service';
     }
   `]
 })
-export class NavbarComponent {
-  currentUser = this.authService.getCurrentUser();
+export class NavbarComponent implements OnInit, OnDestroy {
+  currentUser: any = null;
+  showUser = false;
+  showNavbar = true;
+  private subs: Subscription[] = [];
 
   constructor(
     private authService: AuthService,
     private router: Router
   ) {}
+
+  ngOnInit(): void {
+    this.subs.push(this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      this.updateShowUser();
+    }));
+
+    this.subs.push(this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
+      this.updateShowUser();
+    }));
+
+    // initial evaluation
+    this.currentUser = this.authService.getCurrentUser();
+    this.updateShowUser();
+  }
+
+  ngOnDestroy(): void {
+    this.subs.forEach(s => s.unsubscribe());
+  }
+
+  private updateShowUser(): void {
+    const isAuth = this.authService.isAuthenticated();
+    const url = this.router.url || '';
+    const isAuthRoute = url.startsWith('/auth') || url.includes('/auth/');
+    this.showUser = !!isAuth && !isAuthRoute;
+    // hide full navbar on auth routes
+    this.showNavbar = !isAuthRoute;
+  }
 
   logout(): void {
     this.authService.logout();

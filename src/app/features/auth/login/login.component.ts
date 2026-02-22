@@ -226,8 +226,8 @@ import { AuthService } from '../../../core/services/auth.service';
   `]
 })
 export class LoginComponent {
-  email = 'admin@example.com';
-  password = 'password';
+  email = '';
+  password = '';
   loading = false;
   error = '';
 

@@ -754,9 +754,60 @@ export class ProfileComponent implements OnInit {
   }
 
   getMemberSince(): string {
-    // This would normally come from the user data
-    // For now, return a placeholder
-    return 'Janvier 2024';
+    if (!this.currentUser) {
+      return 'Inconnu';
+    }
+
+    const u: any = this.currentUser as any;
+    // possible field names where creation date may be stored
+    const candidates = [
+      u.createdAt,
+      u.created_at,
+      u.dateCreated,
+      u.registeredAt,
+      u.joinedAt,
+      u.metadata && u.metadata.creationTime,
+      u.metadata && u.metadata.createdAt,
+      u.creationTime
+    ];
+
+    let dateVal: any = null;
+    for (const c of candidates) {
+      if (c !== undefined && c !== null) {
+        dateVal = c;
+        break;
+      }
+    }
+
+    if (!dateVal) {
+      return 'Inconnu';
+    }
+
+    // Firestore Timestamp object
+    try {
+      if (dateVal && typeof dateVal === 'object' && typeof dateVal.toDate === 'function') {
+        const d = dateVal.toDate();
+        return d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+      }
+
+      // If it's a numeric timestamp (seconds or ms)
+      if (typeof dateVal === 'number') {
+        // if in seconds, convert to ms
+        const ts = dateVal < 1e12 ? dateVal * 1000 : dateVal;
+        const d = new Date(ts);
+        return d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+      }
+
+      // If it's an ISO string or other date string
+      const parsed = new Date(dateVal);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+      }
+    } catch (e) {
+      console.warn('getMemberSince: failed to parse date', dateVal, e);
+    }
+
+    return 'Inconnu';
   }
 
   isRecentOrder(createdAt: string): boolean {
