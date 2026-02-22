@@ -150,6 +150,44 @@ interface OrderItem {
           </ng-template>
         </div>
       </div>
+
+      <div class="details-overlay" *ngIf="selectedOrder" (click)="closeOrderDetails()">
+        <div class="details-modal" (click)="$event.stopPropagation()">
+          <div class="details-header">
+            <div>
+              <p class="details-label">Commande #{{ selectedOrder?.id }}</p>
+              <p class="details-date">{{ formatDate(selectedOrder?.created_at || '') }}</p>
+            </div>
+            <button class="close-btn" (click)="closeOrderDetails()" title="Fermer">×</button>
+          </div>
+          <div class="details-body">
+            <div class="details-section">
+              <p class="section-title">Articles</p>
+              <div class="details-item" *ngFor="let item of selectedOrder?.items">
+                <div>
+                  <p class="item-name">{{ item.productName }}</p>
+                  <p class="item-meta">
+                    Quantité: {{ item.quantity }} × {{ item.price | number:'1.2-2' }} TND
+                  </p>
+                </div>
+                <p class="item-total">{{ (item.price * item.quantity) | number:'1.2-2' }} TND</p>
+              </div>
+            </div>
+            <div class="details-section">
+              <p class="section-title">Résumé</p>
+              <div class="summary-row">
+                <span>Total</span>
+                <span class="summary-total">
+                  {{ selectedOrder?.total | number:'1.2-2' }} TND
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="details-footer">
+            <button class="btn btn-primary" (click)="closeOrderDetails()">Fermer</button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
