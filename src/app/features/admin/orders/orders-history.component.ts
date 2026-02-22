@@ -667,14 +667,7 @@ export class OrdersHistoryComponent implements OnInit {
     const ordersCol = collection(db, 'orders');
     const usersCol = collection(db, 'users');
 
-    getDocs(ordersCol).then(async (orderSnap) => {
-      const userDocs = await getDocs(usersCol);
-      const userMap = new Map();
-      
-      userDocs.docs.forEach(doc => {
-        userMap.set(doc.id, doc.data());
-      });
-
+    getDocs(ordersCol).then((orderSnap) => {
       this.orders = orderSnap.docs.map(doc => {
         const data = doc.data() as any;
         console.log('Order data:', data); // Debug log
@@ -694,6 +687,14 @@ export class OrdersHistoryComponent implements OnInit {
           paymentMethod: data.paymentMethod || '',
           deliveryNotes: data.deliveryNotes || ''
         };
+      });
+
+      // Sort orders by date in descending order (most recent first)
+      this.orders.sort((a, b) => {
+        // Use orderDate if available, otherwise createdAt
+        const dateA = new Date(a.orderDate || a.createdAt || 0);
+        const dateB = new Date(b.orderDate || b.createdAt || 0);
+        return dateB.getTime() - dateA.getTime();
       });
 
       this.filteredOrders = [...this.orders];

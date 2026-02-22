@@ -28,6 +28,22 @@ import { PopupService } from '../../shared/components/popup/popup.service';
         </div>
       </div>
     </div>
+    
+    <div *ngIf="!product && !loading" class="product-not-found">
+      <div class="error-container">
+        <div class="error-icon">❌</div>
+        <h2>Produit non trouvé</h2>
+        <p>Le produit que vous recherchez n'existe pas ou a été supprimé.</p>
+        <a routerLink="/shop" class="btn">Retour au catalogue</a>
+      </div>
+    </div>
+    
+    <div *ngIf="loading" class="loading">
+      <div class="loading-container">
+        <div class="loading-icon">⏳</div>
+        <p>Chargement du produit...</p>
+      </div>
+    </div>
   `,
   styles: [`
     .product-detail {
@@ -138,18 +154,56 @@ import { PopupService } from '../../shared/components/popup/popup.service';
         font-size: 1.5rem;
       }
     }
+  `,
+
+  /* Loading and Error States */
+  `
+    .loading, .product-not-found {
+      padding: 4rem 2rem;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(255, 0, 127, 0.1) 100%);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      margin: 2rem auto;
+      max-width: 600px;
+    }
+
+    .loading-container, .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .loading-icon, .error-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .loading p, .product-not-found p {
+      color: rgba(0, 255, 136, 0.8);
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    .product-not-found h2 {
+      color: #ff007f;
+      margin: 0 0 1rem 0;
+    }
   `]
 })
 export class ProductDetailComponent implements OnInit {
   product: Product | null = null;
+  loading = true;
 
   constructor(private route: ActivatedRoute, private productService: ProductService, private cart: CartService, private popupService: PopupService) {}
 
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
+    const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.productService.getProduct(id).subscribe({
         next: (data) => {
+          this.loading = false;
           const p = Array.isArray(data) ? data[0] : (data.data ? data.data[0] : data);
           if (p) {
             this.product = { 
@@ -157,10 +211,20 @@ export class ProductDetailComponent implements OnInit {
               price: Number(p.price) 
             };
             console.log('Product loaded:', this.product);
+          } else {
+            console.error('Product not found for ID:', id);
           }
         },
-        error: (err) => console.error('Error loading product', err)
+        error: (err) => {
+          this.loading = false;
+          console.error('Error loading product', err);
+          // Show error message to user
+          this.product = null;
+        }
       });
+    } else {
+      this.loading = false;
+      console.error('No product ID provided in route');
     }
   }
 
