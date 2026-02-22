@@ -80,7 +80,7 @@ export class FirestoreOrderService {
 
   getAllOrders(): Observable<any[]> {
     console.log('Querying all orders');
-    const q = query(this.ordersCol, orderBy('orderDate', 'desc'));
+    const q = query(this.ordersCol, orderBy('createdAt', 'desc'));
     return from(getDocs(q)).pipe(
       tap(snapshot => {
         console.log(`Found ${snapshot.docs.length} total orders`);

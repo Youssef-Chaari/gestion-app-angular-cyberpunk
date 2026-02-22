@@ -11,6 +11,13 @@ interface Order {
   created_at: string | any;
   total: number;
   items: OrderItem[];
+  clientName?: string;
+  clientEmail?: string;
+  status?: string;
+  phone?: string;
+  address?: string;
+  paymentMethod?: string;
+  deliveryNotes?: string;
 }
 
 interface OrderItem {
@@ -141,40 +148,6 @@ interface OrderItem {
               </div>
             </div>
           </ng-template>
-        </div>
-      </div>
-
-      <div class="details-overlay" *ngIf="selectedOrder" (click)="closeOrderDetails()">
-        <div class="details-modal" (click)="$event.stopPropagation()">
-          <div class="details-header">
-            <div>
-              <p class="details-label">Commande #{{ selectedOrder.id }}</p>
-              <p class="details-date">{{ formatDate(selectedOrder.created_at) }}</p>
-            </div>
-            <button class="close-btn" (click)="closeOrderDetails()" title="Fermer">×</button>
-          </div>
-          <div class="details-body">
-            <div class="details-section">
-              <p class="section-title">Articles</p>
-              <div class="details-item" *ngFor="let item of selectedOrder.items">
-                <div>
-                  <p class="item-name">{{ item.productName }}</p>
-                  <p class="item-meta">Quantité: {{ item.quantity }} × {{ item.price | number:'1.2-2' }} TND</p>
-                </div>
-                <p class="item-total">{{ (item.price * item.quantity) | number:'1.2-2' }} TND</p>
-              </div>
-            </div>
-            <div class="details-section">
-              <p class="section-title">Résumé</p>
-              <div class="summary-row">
-                <span>Total</span>
-                <span class="summary-total">{{ selectedOrder.total | number:'1.2-2' }} TND</span>
-              </div>
-            </div>
-          </div>
-          <div class="details-footer">
-            <button class="btn btn-primary" (click)="closeOrderDetails()">Fermer</button>
-          </div>
         </div>
       </div>
     </div>
@@ -852,13 +825,176 @@ interface OrderItem {
         padding: 1rem;
       }
     }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: fadeInUp 0.3s ease-out;
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(26, 26, 62, 0.95) 100%);
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      border-radius: 12px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 0 40px rgba(0, 255, 136, 0.3), inset 0 0 20px rgba(0, 255, 136, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 2px solid rgba(0, 255, 136, 0.2);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: #00ff88;
+      font-family: 'Space Mono', monospace;
+      font-size: 1.5rem;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #00ff88;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .close-btn:hover {
+      transform: scale(1.2);
+      color: #00cc6a;
+    }
+
+    .modal-body {
+      padding: 2rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .detail-group {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(0, 255, 136, 0.1);
+    }
+
+    .detail-group:last-child {
+      border-bottom: none;
+    }
+
+    .detail-group label {
+      display: block;
+      color: rgba(0, 255, 136, 0.8);
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .detail-group p {
+      margin: 0;
+      color: #00ff88;
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+    }
+
+    .detail-group p.amount {
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+
+    .order-items {
+      margin-top: 1rem;
+    }
+
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem;
+      background: rgba(0, 255, 136, 0.05);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+
+    .order-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-name {
+      display: block;
+      color: #00ff88;
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 0.3rem;
+    }
+
+    .item-details {
+      display: block;
+      color: rgba(0, 255, 136, 0.7);
+      font-size: 0.9rem;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .item-total {
+      color: #00ff88;
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+    }
+
+    .modal-footer {
+      padding: 1.5rem;
+      border-top: 2px solid rgba(0, 255, 136, 0.2);
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
   `]
 })
 export class ProfileComponent implements OnInit {
   orders: Order[] = [];
   currentUser: User | null = null;
-  memberSince = 'Inconnu';
   selectedOrder: Order | null = null;
+  memberSince = 'Inconnu';
   private db: Firestore;
 
   constructor(private authService: AuthService, private ordersService: FirestoreOrderService) {
@@ -918,11 +1054,26 @@ export class ProfileComponent implements OnInit {
           console.log('Processing order:', o);
           return {
             id: o.id,
-            created_at: o.orderDate || o.created_at || o.createdAt || new Date().toISOString(),
+            created_at: o.createdAt || o.orderDate || o.created_at || new Date().toISOString(),
             total: o.totalAmount || o.total || (o.items ? o.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0) : 0),
-            items: o.items || []
+            items: o.items || [],
+            clientName: o.name || o.clientName || '',
+            clientEmail: o.email || o.clientEmail || '',
+            status: o.status || 'Complétée',
+            phone: o.phone || '',
+            address: o.address || '',
+            paymentMethod: o.paymentMethod || '',
+            deliveryNotes: o.deliveryNotes || ''
           };
         });
+        
+        // Sort orders by created_at in descending order (most recent first)
+        this.orders.sort((a, b) => {
+          const dateA = this.parseCreatedAtDate(a.created_at);
+          const dateB = this.parseCreatedAtDate(b.created_at);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
         console.log('✓ Final orders array:', this.orders);
       },
       error: (err) => {
@@ -947,13 +1098,8 @@ export class ProfileComponent implements OnInit {
     return role === 'admin' ? 'Administrateur' : 'Utilisateur';
   }
 
-  getRoleClass(role: string): string {
-    return role === 'admin' ? 'admin' : 'user';
-  }
 
-  getUserDisplayName(): string {
-    if (!this.currentUser) return 'N/A';
-    
+
     const firstName = (this.currentUser as any).firstName || '';
     const lastName = (this.currentUser as any).lastName || '';
     const fullName = `${firstName} ${lastName}`.trim();
@@ -1090,7 +1236,58 @@ export class ProfileComponent implements OnInit {
     });
   }
 
+  viewOrderDetails(order: Order): void {
+    this.selectedOrder = order;
+  }
+
+  closeOrderDetails(): void {
+    this.selectedOrder = null;
+  }
+
+
   trackByOrderId(index: number, order: Order): string {
     return order.id;
+  }
+
+  parseCreatedAtDate(createdAt: any): Date {
+    if (!createdAt) return new Date(0);
+    
+    try {
+      // Handle Firestore Timestamp
+      if (createdAt && typeof createdAt === 'object' && createdAt.toDate) {
+        return createdAt.toDate();
+      }
+      
+      // Handle format: "22 February 2026 at 01:25:05 UTC+1"
+      const match = createdAt.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+at\s+(\d{2}):(\d{2}):(\d{2})\s+UTC([+-]\d+)/);
+      if (match) {
+        const [, day, month, year, hours, minutes, seconds, timezone] = match;
+        const monthNames: { [key: string]: number } = {
+          'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+          'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+        };
+        const monthIndex = monthNames[month];
+        if (monthIndex !== undefined) {
+          const date = new Date();
+          date.setFullYear(parseInt(year), monthIndex, parseInt(day));
+          date.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
+          // Adjust for timezone offset
+          const offsetHours = parseInt(timezone);
+          date.setHours(date.getHours() - offsetHours);
+          return date;
+        }
+      }
+      
+      // Try parsing as ISO string
+      const isoDate = new Date(createdAt);
+      if (!isNaN(isoDate.getTime())) {
+        return isoDate;
+      }
+      
+      // Fallback
+      return new Date(0);
+    } catch {
+      return new Date(0);
+    }
   }
 }
