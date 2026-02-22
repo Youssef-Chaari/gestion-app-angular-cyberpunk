@@ -226,7 +226,7 @@ export class CheckoutComponent {
           orders.push(Object.assign({ id: Date.now() }, order));
           localStorage.setItem('app_orders', JSON.stringify(orders));
           this.cart.clear();
-          this.popupService.showInfo('Commande enregistrée localement (connexion perdue)', 'Information');
+          this.popupService.showInfo('Commande sauvegardée localement. Elle sera synchronisée automatiquement quand la connexion sera rétablie.', 'Mode Hors Ligne');
           this.router.navigate(['/shop/profile']);
         }
       });
