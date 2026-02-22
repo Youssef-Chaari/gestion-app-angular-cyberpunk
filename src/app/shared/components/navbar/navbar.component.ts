@@ -14,7 +14,7 @@ import { AuthService } from '../../../core/services/auth.service';
         <div class="navbar-title">GESTION APP</div>
       </div>
       <div class="navbar-right">
-        <div class="user-info">{{ currentUser?.username | uppercase }}</div>
+        <div class="user-info">{{ currentUser?.firstName }} {{ currentUser?.lastName }}</div>
         <button class="logout-btn" (click)="logout()">DÉCONNEXION</button>
       </div>
     </nav>

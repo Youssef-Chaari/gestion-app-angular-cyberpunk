@@ -10,7 +10,9 @@ import { of } from 'rxjs';
 export interface User {
   id: number | string;
   uid?: string;
-  username: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   role: string;
 }
