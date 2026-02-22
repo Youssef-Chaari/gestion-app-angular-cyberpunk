@@ -126,7 +126,7 @@ interface OrderItem {
                   <span class="status-icon">✅</span>
                   <span class="status-text">Commande livrée</span>
                 </div>
-                <button class="btn btn-secondary btn-details" (click)="viewOrderDetails(order)" title="Voir les détails">
+                <button class="btn btn-secondary btn-details" title="Voir les détails" (click)="openOrderDetails(order)">
                   <span class="btn-icon">📋</span>
                   <span class="btn-text">DÉTAILS</span>
                 </button>
@@ -151,72 +151,40 @@ interface OrderItem {
         </div>
       </div>
 
-      <!-- Order Details Modal -->
-      <div class="modal-overlay" *ngIf="selectedOrder" (click)="closeOrderDetails()">
-        <div class="modal-content" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h2>Détails de la commande</h2>
-            <button class="close-btn" (click)="closeOrderDetails()" title="Fermer">✕</button>
+      <div class="details-overlay" *ngIf="selectedOrder" (click)="closeOrderDetails()">
+        <div class="details-modal" (click)="$event.stopPropagation()">
+          <div class="details-header">
+            <div>
+              <p class="details-label">Commande #{{ selectedOrder?.id }}</p>
+              <p class="details-date">{{ formatDate(selectedOrder?.created_at || '') }}</p>
+            </div>
+            <button class="close-btn" (click)="closeOrderDetails()" title="Fermer">×</button>
           </div>
-          <div class="modal-body">
-            <div class="detail-group">
-              <label>ID Commande:</label>
-              <p>{{ selectedOrder.id }}</p>
-            </div>
-            <div class="detail-group">
-              <label>Date:</label>
-              <p>{{ formatDate(selectedOrder.created_at) }}</p>
-            </div>
-            <div class="detail-group" *ngIf="selectedOrder.clientName">
-              <label>Nom du client:</label>
-              <p>{{ selectedOrder.clientName }}</p>
-            </div>
-            <div class="detail-group" *ngIf="selectedOrder.clientEmail">
-              <label>Email:</label>
-              <p>{{ selectedOrder.clientEmail }}</p>
-            </div>
-            <div class="detail-group">
-              <label>Montant total:</label>
-              <p class="amount">{{ selectedOrder.total | number:'1.0-2' }} TND</p>
-            </div>
-            <div class="detail-group" *ngIf="selectedOrder.status">
-              <label>Statut:</label>
-              <p>{{ selectedOrder.status }}</p>
-            </div>
-            <div class="detail-group" *ngIf="selectedOrder.phone">
-              <label>Téléphone:</label>
-              <p>{{ selectedOrder.phone }}</p>
-            </div>
-            <div class="detail-group" *ngIf="selectedOrder.address">
-              <label>Adresse:</label>
-              <p>{{ selectedOrder.address }}</p>
-            </div>
-            <div class="detail-group" *ngIf="selectedOrder.paymentMethod">
-              <label>Méthode de paiement:</label>
-              <p>{{ selectedOrder.paymentMethod }}</p>
-            </div>
-            <div class="detail-group" *ngIf="selectedOrder.deliveryNotes">
-              <label>Notes de livraison:</label>
-              <p>{{ selectedOrder.deliveryNotes }}</p>
-            </div>
-            <div class="detail-group">
-              <label>Articles commandés:</label>
-              <div class="order-items">
-                <div class="order-item" *ngFor="let item of selectedOrder.items">
-                  <div class="item-info">
-                    <span class="item-name">{{ item.productName }}</span>
-                    <span class="item-details">Quantité: {{ item.quantity }} × {{ item.price | number:'1.0-2' }} TND</span>
-                  </div>
-                  <div class="item-total">{{ (item.price * item.quantity) | number:'1.0-2' }} TND</div>
+          <div class="details-body">
+            <div class="details-section">
+              <p class="section-title">Articles</p>
+              <div class="details-item" *ngFor="let item of selectedOrder?.items">
+                <div>
+                  <p class="item-name">{{ item.productName }}</p>
+                  <p class="item-meta">
+                    Quantité: {{ item.quantity }} × {{ item.price | number:'1.2-2' }} TND
+                  </p>
                 </div>
+                <p class="item-total">{{ (item.price * item.quantity) | number:'1.2-2' }} TND</p>
+              </div>
+            </div>
+            <div class="details-section">
+              <p class="section-title">Résumé</p>
+              <div class="summary-row">
+                <span>Total</span>
+                <span class="summary-total">
+                  {{ selectedOrder?.total | number:'1.2-2' }} TND
+                </span>
               </div>
             </div>
           </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="closeOrderDetails()">
-              <span class="btn-icon">✕</span>
-              Fermer
-            </button>
+          <div class="details-footer">
+            <button class="btn btn-primary" (click)="closeOrderDetails()">Fermer</button>
           </div>
         </div>
       </div>
@@ -680,6 +648,137 @@ interface OrderItem {
       transform: translateY(-2px);
     }
 
+    .details-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 2rem;
+    }
+
+    .details-modal {
+      background: rgba(10, 14, 39, 0.98);
+      border: 1px solid rgba(0, 255, 136, 0.4);
+      border-radius: 16px;
+      width: min(520px, 100%);
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+    }
+
+    .details-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 1.5rem;
+      border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+    }
+
+    .details-label {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      color: #00ff88;
+      letter-spacing: 1px;
+    }
+
+    .details-date {
+      margin: 0.25rem 0 0;
+      color: rgba(0, 255, 136, 0.7);
+      font-size: 0.85rem;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      font-size: 1.5rem;
+      color: #00ff88;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      transition: color 0.2s ease;
+    }
+
+    .close-btn:hover {
+      color: #ff006e;
+    }
+
+    .details-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .details-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 0.9rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(0, 255, 136, 0.8);
+      font-family: 'Space Mono', monospace;
+    }
+
+    .details-item {
+      padding: 0.75rem 1rem;
+      background: rgba(0, 255, 136, 0.04);
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-name {
+      margin: 0;
+      font-weight: 600;
+      color: #00ff88;
+    }
+
+    .item-meta {
+      margin: 0;
+      font-size: 0.85rem;
+      color: rgba(0, 255, 136, 0.7);
+    }
+
+    .item-total {
+      margin: 0;
+      color: #00ff88;
+      font-weight: 700;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .summary-total {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #00ff88;
+    }
+
+    .details-footer {
+      padding: 1.25rem 1.5rem;
+      border-top: 1px solid rgba(0, 255, 136, 0.2);
+      display: flex;
+      justify-content: flex-end;
+    }
+
     /* Animations */
     @keyframes fadeInUp {
       from {
@@ -1025,6 +1124,14 @@ export class ProfileComponent implements OnInit {
     });
   }
 
+  openOrderDetails(order: Order): void {
+    this.selectedOrder = order;
+  }
+
+  closeOrderDetails(): void {
+    this.selectedOrder = null;
+  }
+
   getRoleLabel(role: string): string {
     return role === 'admin' ? 'Administrateur' : 'Utilisateur';
   }
@@ -1033,13 +1140,15 @@ export class ProfileComponent implements OnInit {
     return role === 'admin' ? 'admin' : 'user';
   }
 
+
+
   getUserDisplayName(): string {
     if (!this.currentUser) return 'N/A';
-    
+
     const firstName = (this.currentUser as any).firstName || '';
     const lastName = (this.currentUser as any).lastName || '';
     const fullName = `${firstName} ${lastName}`.trim();
-    
+
     return fullName || this.currentUser.email || 'Utilisateur';
   }
 
@@ -1172,13 +1281,7 @@ export class ProfileComponent implements OnInit {
     });
   }
 
-  viewOrderDetails(order: Order): void {
-    this.selectedOrder = order;
-  }
 
-  closeOrderDetails(): void {
-    this.selectedOrder = null;
-  }
 
   trackByOrderId(index: number, order: Order): string {
     return order.id;
