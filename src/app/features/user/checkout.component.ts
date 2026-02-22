@@ -59,7 +59,10 @@ export class CheckoutComponent {
         name: this.name,
         address: this.address,
         items: items.map((it: any, index: number) => ({
-          ...it,
+          productId: it.product.id,
+          productName: it.product.name,
+          price: it.product.price,
+          quantity: it.quantity,
           currentStock: currentProducts[index]?.stock || 0
         })),
         totalAmount: items.reduce((s: any, it: any) => s + it.product.price * it.quantity, 0),
