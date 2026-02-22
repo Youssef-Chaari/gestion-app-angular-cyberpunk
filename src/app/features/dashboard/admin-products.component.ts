@@ -8,8 +8,10 @@ interface ProductEdit {
   name: string;
   price: number;
   stock: number;
+  description?: string;
   editing: boolean;
   originalStock: number;
+  originalDescription?: string;
 }
 
 @Component({
@@ -33,6 +35,7 @@ interface ProductEdit {
               <th>Nom</th>
               <th>Prix</th>
               <th>Stock</th>
+              <th>Description</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -52,6 +55,19 @@ interface ProductEdit {
                 </div>
               </td>
               <td>
+                <div class="description-cell">
+                  <textarea 
+                    [(ngModel)]="product.description"
+                    *ngIf="product.editing"
+                    class="description-input"
+                    placeholder="Entrez la description du produit"
+                    rows="3"></textarea>
+                  <span *ngIf="!product.editing" class="description-preview">
+                    {{ product.description || 'Aucune description' }}
+                  </span>
+                </div>
+              </td>
+              <td>
                 <div class="actions">
                   <button *ngIf="!product.editing" 
                           (click)="startEdit(product)"
@@ -59,7 +75,7 @@ interface ProductEdit {
                     ✏️ Modifier
                   </button>
                   <div *ngIf="product.editing" class="edit-actions">
-                    <button (click)="saveStock(product)" class="btn btn-save">
+                    <button (click)="saveProduct(product)" class="btn btn-save">
                       💾 Sauver
                     </button>
                     <button (click)="cancelEdit(product)" class="btn btn-cancel">
@@ -178,6 +194,38 @@ interface ProductEdit {
       box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
     }
 
+    .description-cell {
+      max-width: 300px;
+    }
+
+    .description-input {
+      width: 100%;
+      padding: 0.5rem;
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid #00ff88;
+      color: #00ff88;
+      border-radius: 4px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      resize: vertical;
+    }
+
+    .description-input:focus {
+      outline: none;
+      border-color: #ff006e;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+
+    .description-preview {
+      display: block;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.85rem;
+      color: rgba(0, 255, 136, 0.7);
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
     .actions {
       display: flex;
       gap: 0.5rem;
@@ -271,8 +319,10 @@ export class AdminProductsComponent implements OnInit {
           name: p.name,
           price: Number(p.price),
           stock: Number(p.stock || 0),
+          description: p.description || '',
           editing: false,
-          originalStock: Number(p.stock || 0)
+          originalStock: Number(p.stock || 0),
+          originalDescription: p.description || ''
         }));
         this.loading = false;
       },
@@ -287,26 +337,34 @@ export class AdminProductsComponent implements OnInit {
   startEdit(product: ProductEdit): void {
     product.editing = true;
     product.originalStock = product.stock;
+    product.originalDescription = product.description || '';
     this.clearMessages();
   }
 
   cancelEdit(product: ProductEdit): void {
     product.stock = product.originalStock;
+    product.description = product.originalDescription || '';
     product.editing = false;
     this.clearMessages();
   }
 
-  saveStock(product: ProductEdit): void {
-    this.productService.updateProduct(product.id, { stock: product.stock }).subscribe({
+  saveProduct(product: ProductEdit): void {
+    const updates: any = {
+      stock: product.stock,
+      description: product.description || ''
+    };
+    
+    this.productService.updateProduct(product.id, updates).subscribe({
       next: () => {
         product.editing = false;
-        this.successMessage = `Stock du produit "${product.name}" mis à jour avec succès`;
+        this.successMessage = `Produit "${product.name}" mis à jour avec succès`;
         setTimeout(() => this.clearMessages(), 3000);
       },
       error: (err) => {
         console.error('Error updating product:', err);
-        this.errorMessage = 'Erreur lors de la mise à jour du stock';
+        this.errorMessage = 'Erreur lors de la mise à jour du produit';
         product.stock = product.originalStock;
+        product.description = product.originalDescription || '';
       }
     });
   }

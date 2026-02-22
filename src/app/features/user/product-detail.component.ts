@@ -20,7 +20,7 @@ import { PopupService } from '../../shared/components/popup/popup.service';
           <h2>{{ product.name }}</h2>
           <p class="category">{{ product.category_name }}</p>
           <p class="price">{{ product.price | number:'1.2-2' }} TND</p>
-          <p class="description">{{ product.description }}</p>
+          <p class="description" *ngIf="product.description">{{ product.description }}</p>
           <div class="actions">
             <button class="btn" (click)="addToCart()">Ajouter au panier</button>
             <a routerLink="/shop/cart" class="btn">Voir le panier</a>

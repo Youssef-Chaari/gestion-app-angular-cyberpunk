@@ -203,6 +203,18 @@ import { CategoryService, Category } from '../../core/services/category.service'
 
               <div class="form-group form-group-full">
                 <label class="form-label">
+                  <span class="label-icon">📝</span>
+                  DESCRIPTION DU PRODUIT
+                </label>
+                <textarea class="form-textarea"
+                          [(ngModel)]="formData.description"
+                          name="description"
+                          placeholder="Entrez la description détaillée du produit..."
+                          rows="5"></textarea>
+              </div>
+
+              <div class="form-group form-group-full">
+                <label class="form-label">
                   <span class="label-icon">🖼️</span>
                   IMAGE DU PRODUIT
                 </label>
@@ -805,6 +817,32 @@ import { CategoryService, Category } from '../../core/services/category.service'
       position: relative;
     }
 
+    .form-textarea {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      border-radius: 8px;
+      font-size: 1rem;
+      background: rgba(0, 255, 136, 0.05);
+      color: #00ff88;
+      font-family: 'Space Mono', monospace;
+      transition: all 0.3s ease;
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .form-textarea::placeholder {
+      color: rgba(0, 255, 136, 0.5);
+    }
+
+    .form-textarea:focus {
+      outline: none;
+      border-color: #00ff88;
+      box-shadow: 0 0 25px rgba(0, 255, 136, 0.3), inset 0 0 25px rgba(0, 255, 136, 0.1);
+      background: rgba(0, 255, 136, 0.1);
+      transform: translateY(-1px);
+    }
+
     .form-input::placeholder {
       color: rgba(0, 255, 136, 0.5);
     }
@@ -1220,12 +1258,16 @@ export class ProductsComponent implements OnInit {
   editingId: string | null = null;
   isSaving = false;
   selectedProductImage: Product | null = null;
+  originalImage: string = '';
+  imageChanged: boolean = false;
   formData: Product = {
     id: '',
     name: '',
     price: 0,
     category_id: '',
-    stock: 0
+    stock: 0,
+    description: '',
+    image: ''
   };
 
   constructor(private productService: ProductService, private categoryService: CategoryService) {}
@@ -1275,18 +1317,24 @@ export class ProductsComponent implements OnInit {
 
   openForm(): void {
     this.editingId = null;
-    this.formData = { id: 0, name: '', price: 0, category_id: '', stock: 0, image: '' };
+    this.originalImage = '';
+    this.imageChanged = false;
+    this.formData = { id: 0, name: '', price: 0, category_id: '', stock: 0, image: '', description: '' };
     // Use already-loaded categories; don't reload
     this.showForm = true;
   }
 
   editProduct(product: Product): void {
     this.editingId = String(product.id ?? '');
+    this.originalImage = product.image || '';
+    this.imageChanged = false;
     this.formData = { 
       ...product, 
       category_id: String(product.category_id || ''),
       price: Number(product.price),
-      stock: Number(product.stock || 0)
+      stock: Number(product.stock || 0),
+      image: product.image || '',
+      description: product.description || ''
     };
     // Use already-loaded categories; don't reload
     this.showForm = true;
@@ -1302,22 +1350,42 @@ export class ProductsComponent implements OnInit {
 
     this.isSaving = true;
 
+    // Determine which image to save
+    let imageToSave = this.formData.image || this.originalImage;
+    
+    // When editing a product - ALWAYS use original if not explicitly changed
+    if (this.editingId && !this.imageChanged) {
+      imageToSave = this.originalImage;
+    }
+
     // Create clean payload with proper field mapping for Firestore
-    const payload = {
+    const payload: any = {
       name: this.formData.name,
       price: Number(this.formData.price),
       stock: Number(this.formData.stock),
       categoryId: String(this.formData.category_id),  // Map to categoryId for Firestore
-      description: this.formData.description || '',
-      image: this.formData.image || ''
+      description: this.formData.description || ''
     };
 
-    console.log('Saving product:', { editingId: this.editingId, formData: this.formData, payload, selectedCategory: this.categories.find(c => String(c.id) === String(this.formData.category_id)) });
+    // Only include image in payload if we have one
+    if (imageToSave) {
+      payload.image = imageToSave;
+    }
+
+    console.log('Saving product:', { 
+      editingId: this.editingId, 
+      imageChanged: this.imageChanged,
+      formDataImage: this.formData.image,
+      originalImage: this.originalImage,
+      finalImageToSave: imageToSave,
+      payload,
+      selectedCategory: this.categories.find(c => String(c.id) === String(this.formData.category_id)) 
+    });
 
     if (this.editingId) {
       this.productService.updateProduct(this.editingId, payload).subscribe({
         next: () => {
-          console.log('Product updated successfully');
+          console.log('Product updated successfully with image:', imageToSave);
           this.loadProducts();
           this.isSaving = false;
           this.closeForm();
@@ -1328,6 +1396,8 @@ export class ProductsComponent implements OnInit {
         }
       });
     } else {
+      // For new products, set image to empty string if not provided
+      payload.image = imageToSave || '';
       this.productService.createProduct(payload as Product).subscribe({
         next: () => {
           console.log('Product created successfully');
@@ -1357,6 +1427,8 @@ export class ProductsComponent implements OnInit {
   closeForm(): void {
     this.showForm = false;
     this.editingId = null;
+    this.originalImage = '';
+    this.imageChanged = false;
     this.isSaving = false;
   }
 
@@ -1369,7 +1441,8 @@ export class ProductsComponent implements OnInit {
   }
 
   onImageChange(): void {
-    // Image URL is being updated, validation happens on save
+    // Image URL is being updated, mark as changed
+    this.imageChanged = true;
   }
 
   onFileSelected(event: any): void {
@@ -1392,6 +1465,7 @@ export class ProductsComponent implements OnInit {
       const reader = new FileReader();
       reader.onload = (e: any) => {
         this.formData.image = e.target.result;
+        this.imageChanged = true;
         console.log('Image selected and converted to base64');
       };
       reader.readAsDataURL(file);
