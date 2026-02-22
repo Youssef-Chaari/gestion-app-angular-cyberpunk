@@ -36,14 +36,14 @@ export class FirestoreOrderService {
   }
 
   getOrdersByUser(userId: string): Observable<any[]> {
-    const q = query(this.ordersCol, where('userId', '==', userId), orderBy('created_at', 'desc'));
+    const q = query(this.ordersCol, where('userId', '==', userId), orderBy('orderDate', 'desc'));
     return from(getDocs(q)).pipe(
       map(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })))
     );
   }
 
   getAllOrders(): Observable<any[]> {
-    const q = query(this.ordersCol, orderBy('created_at', 'desc'));
+    const q = query(this.ordersCol, orderBy('orderDate', 'desc'));
     return from(getDocs(q)).pipe(
       map(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })))
     );

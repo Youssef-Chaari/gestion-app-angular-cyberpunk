@@ -8,7 +8,8 @@ import { of } from 'rxjs';
 // environment is already imported above
 
 export interface User {
-  id: number;
+  id: number | string;
+  uid?: string;
   username: string;
   email: string;
   role: string;

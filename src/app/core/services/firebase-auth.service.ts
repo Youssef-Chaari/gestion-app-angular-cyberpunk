@@ -37,6 +37,7 @@ export class FirebaseAuthService {
                 token,
                 user: {
                   id: fsUser.id,
+                  uid: userCred.user.uid,
                   username: fsUser.username || fsUser.email,
                   email: fsUser.email,
                   role: fsUser.role || 'user'
@@ -47,7 +48,7 @@ export class FirebaseAuthService {
             return {
               success: true,
               token,
-              user: { id: userCred.user.uid, username: email, email: userCred.user.email, role: 'user' }
+              user: { id: userCred.user.uid, uid: userCred.user.uid, username: email, email: userCred.user.email, role: 'user' }
             };
           })
         ))
@@ -70,6 +71,7 @@ export class FirebaseAuthService {
                 token,
                 user: {
                   id: fsUser.id,
+                  uid: userCred.user.uid,
                   username: fsUser.username || fsUser.email,
                   email: fsUser.email,
                   role: fsUser.role || 'user'
@@ -80,7 +82,7 @@ export class FirebaseAuthService {
             return {
               success: true,
               token,
-              user: { id: userCred.user.uid, username: email, email: userCred.user.email, role: 'user' }
+              user: { id: userCred.user.uid, uid: userCred.user.uid, username: email, email: userCred.user.email, role: 'user' }
             };
           })
         ))

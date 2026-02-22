@@ -315,7 +315,7 @@ export class AdminOrdersComponent implements OnInit {
     this.ordersService.getAllOrders().subscribe(list => {
       this.orders = list.map(o => ({
         ...o,
-        created_at: o.created_at && typeof o.created_at === 'object' && 'toDate' in o.created_at ? o.created_at.toDate().toISOString() : (o.created_at || o.createdAt || new Date().toISOString())
+        created_at: o.orderDate || o.created_at || o.createdAt || new Date().toISOString()
       }));
       this.loading = false;
     }, () => {

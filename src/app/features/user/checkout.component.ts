@@ -5,6 +5,8 @@ import { CartService } from '../../core/services/cart.service';
 import { FormsModule } from '@angular/forms';
 import { FirestoreOrderService } from '../../core/services/firestore-order.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ProductService } from '../../core/services/product.service';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-checkout',
@@ -33,7 +35,7 @@ export class CheckoutComponent {
   name = '';
   address = '';
 
-  constructor(private cart: CartService, private router: Router, private orders: FirestoreOrderService, private auth: AuthService) {}
+  constructor(private cart: CartService, private router: Router, private orders: FirestoreOrderService, private auth: AuthService, private productService: ProductService) {}
 
   placeOrder() {
     const items = this.cart.getItems();
@@ -41,37 +43,47 @@ export class CheckoutComponent {
       alert('Panier vide');
       return;
     }
-    
-    // Add current stock from product to each item for stock decrement
-    const order = {
-      name: this.name,
-      address: this.address,
-      items: items.map((it: any) => ({
-        ...it,
-        currentStock: it.product?.stock || 0
-      })),
-      total: items.reduce((s:any, it:any)=> s + it.product.price * it.quantity, 0),
-      created_at: new Date().toISOString(),
-      userId: (this.auth.getCurrentUser() as any)?.uid || (this.auth.getCurrentUser() as any)?.id || null
-    };
 
-    // create order in Firestore, fallback to localStorage
-    this.orders.createOrder(order).subscribe({
-      next: (res: any) => {
-        this.cart.clear();
-        alert('Commande créée (id: ' + (res?.id || 'n/a') + ')');
-        this.router.navigate(['/shop/profile']);
-      },
-      error: (err: any) => {
-        console.error('Order create failed, saving locally', err);
-        const ordersRaw = localStorage.getItem('app_orders');
-        const orders = ordersRaw ? JSON.parse(ordersRaw) : [];
-        orders.push(Object.assign({ id: Date.now() }, order));
-        localStorage.setItem('app_orders', JSON.stringify(orders));
-        this.cart.clear();
-        alert('Commande créée (enregistrée localement)');
-        this.router.navigate(['/shop/profile']);
+    // Fetch current stock from Firestore for each product
+    const productObservables = items.map(item => this.productService.getProduct(item.product.id));
+    forkJoin(productObservables).subscribe(currentProducts => {
+      // Check stock availability
+      const insufficientStock = items.some((it, index) => it.quantity > (currentProducts[index]?.stock || 0));
+      if (insufficientStock) {
+        alert('Stock insuffisant pour un ou plusieurs produits. Veuillez ajuster les quantités.');
+        return;
       }
+
+      const order = {
+        name: this.name,
+        address: this.address,
+        items: items.map((it: any, index: number) => ({
+          ...it,
+          currentStock: currentProducts[index]?.stock || 0
+        })),
+        total: items.reduce((s: any, it: any) => s + it.product.price * it.quantity, 0),
+        orderDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+        userId: (this.auth.getCurrentUser() as any)?.uid || null
+      };
+
+      // create order in Firestore, fallback to localStorage
+      this.orders.createOrder(order).subscribe({
+        next: (res: any) => {
+          this.cart.clear();
+          alert('Commande créée (id: ' + (res?.id || 'n/a') + ')');
+          this.router.navigate(['/shop/profile']);
+        },
+        error: (err: any) => {
+          console.error('Order create failed, saving locally', err);
+          const ordersRaw = localStorage.getItem('app_orders');
+          const orders = ordersRaw ? JSON.parse(ordersRaw) : [];
+          orders.push(Object.assign({ id: Date.now() }, order));
+          localStorage.setItem('app_orders', JSON.stringify(orders));
+          this.cart.clear();
+          alert('Commande créée (enregistrée localement)');
+          this.router.navigate(['/shop/profile']);
+        }
+      });
     });
   }
 }
